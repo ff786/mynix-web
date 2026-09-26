@@ -28,7 +28,7 @@ export default function ImageField({ defaultValue, sku }: { defaultValue: string
     if (file.size > MAX_BYTES) return setError("Images must be under 8 MB.");
 
     setUploading(true);
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const ext = file.type.split("/")[1].replace("jpeg", "jpg");
     const slug = (sku || "product").toLowerCase().replace(/[^a-z0-9-]+/g, "-");
     const path = `${slug}-${Date.now()}.${ext}`;
     const { error: uploadError } = await createSupabaseBrowserClient()

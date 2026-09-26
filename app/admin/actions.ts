@@ -43,6 +43,10 @@ export type ProductFormState = {
   fieldErrors?: Partial<Record<"sku" | "name" | "category" | "description" | "sort_order", string>>;
 };
 
+/** Object names ImageField creates: `<sku-slug>-<timestamp>.<ext>`. */
+const STORAGE_IMAGE = /^[a-z0-9-]{1,80}\.(jpe?g|png|webp|avif)$/;
+const BUNDLED_IMAGE = /^\/images\/[A-Za-z0-9/_-]{1,200}\.(jpe?g|png|webp|avif)$/;
+
 const lines = (value: FormDataEntryValue | null) =>
   String(value ?? "")
     .split("\n")
@@ -72,6 +76,11 @@ export async function saveProduct(_prev: ProductFormState, formData: FormData): 
   const image = String(formData.get("image") ?? "").trim() || null;
   const flagship = formData.get("flagship") === "on";
   const published = formData.get("published") === "on";
+
+  // Only photos uploaded to our bucket, or bundled files under /images.
+  if (image && !STORAGE_IMAGE.test(image) && !BUNDLED_IMAGE.test(image)) {
+    return { error: "That photo isn't valid. Upload it again." };
+  }
 
   const fieldErrors: ProductFormState["fieldErrors"] = {};
   if (!/^[A-Z0-9][A-Z0-9-]{1,39}$/.test(sku)) fieldErrors.sku = "Use letters, numbers and dashes, e.g. MNX-TRC-18.";
