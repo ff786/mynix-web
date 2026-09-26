@@ -81,6 +81,12 @@ insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)
 on conflict (id) do update set public = true;
 
+-- Storage only deletes objects the caller can select, so admins need this for
+-- remove() to work (public URLs are served without it).
+drop policy if exists "admins read product images" on storage.objects;
+create policy "admins read product images" on storage.objects
+  for select to authenticated using (bucket_id = 'product-images' and public.is_admin());
+
 drop policy if exists "admins upload product images" on storage.objects;
 create policy "admins upload product images" on storage.objects
   for insert to authenticated with check (bucket_id = 'product-images' and public.is_admin());
