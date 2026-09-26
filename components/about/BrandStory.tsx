@@ -10,15 +10,15 @@ import { PRODUCT_RANGES } from "@/data/ranges";
 
 const PILLARS = [
   {
-    title: "Precision first",
+    title: "Precision First",
     body: "Every instrument we carry is chosen for one reason: it helps you see a stone as it truly is its colour, its clarity, its character.",
   },
   {
-    title: "Rooted in the trade",
+    title: "Rooted In The Trade",
     body: "Built around the everyday needs of gemologists, traders and appraisers in Sri Lanka from Rathnapura's gem markets to laboratories worldwide.",
   },
   {
-    title: "Direct, personal service",
+    title: "Direct, Personal Service",
     body: "No carts, no call centres. Talk to the MYNIX team directly on WhatsApp for pricing, availability and honest recommendations.",
   },
 ];
@@ -74,7 +74,7 @@ export default function BrandStory({ productCount }: { productCount: number }) {
                     <span className="font-mono text-xs tabular-nums text-ink/40 transition-colors duration-500 group-hover/row:text-accent sm:col-span-1 sm:pt-2.5">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <h3 className="font-serif text-[1.75rem] font-normal leading-tight tracking-[-0.01em] text-ink sm:col-span-3">
+                    <h3 className="text-base text-[1.75rem] font-normal leading-tight tracking-[-0.01em] text-ink sm:col-span-3">
                       {pillar.title}
                     </h3>
                     <p className="leading-relaxed text-ink/60 sm:col-span-4 sm:pt-1.5">{pillar.body}</p>
@@ -96,7 +96,7 @@ export default function BrandStory({ productCount }: { productCount: number }) {
             {stats.map((stat) => (
               <div key={stat.label} className="flex flex-col-reverse">
                 <dt className="mt-3 text-xs uppercase tracking-[0.25em] text-ink/50">{stat.label}</dt>
-                <dd className="font-serif text-7xl font-light tabular-nums tracking-[-0.02em] text-ink sm:text-8xl">
+                <dd className="text-base text-7xl font-light tabular-nums tracking-[-0.02em] text-ink sm:text-8xl">
                   <CountUp value={stat.value} suffix={stat.suffix} />
                 </dd>
               </div>
