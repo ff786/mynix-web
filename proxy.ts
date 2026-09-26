@@ -7,11 +7,15 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/sup
  * visitors to the login page. This is an optimistic check only — every admin
  * page and action re-verifies the user, and database rules (RLS) enforce it.
  */
+/** Admin pages reachable while signed out (the password-reset flow). */
+const PUBLIC_PATHS = new Set(["/admin/forgot-password", "/admin/auth/confirm"]);
+
 export async function proxy(request: NextRequest) {
   const isLogin = request.nextUrl.pathname === "/admin/login";
   if (!isSupabaseConfigured) {
     return isLogin ? NextResponse.next() : NextResponse.redirect(new URL("/admin/login", request.url));
   }
+  if (PUBLIC_PATHS.has(request.nextUrl.pathname)) return NextResponse.next();
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

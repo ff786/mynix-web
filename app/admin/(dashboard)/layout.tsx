@@ -21,6 +21,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Link href="/admin/subscribers" className="text-ink/70 transition-colors hover:text-ink">
                 Subscribers
               </Link>
+              <Link href="/admin/security" className="text-ink/70 transition-colors hover:text-ink">
+                Security
+              </Link>
               <a
                 href="/"
                 target="_blank"

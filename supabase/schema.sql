@@ -26,7 +26,9 @@ stable
 security definer
 set search_path = ''
 as $$
-  select exists (select 1 from public.admins where user_id = auth.uid());
+  -- Admin rights need a two-step (aal2) session, not just the password.
+  select coalesce(auth.jwt() ->> 'aal', '') = 'aal2'
+     and exists (select 1 from public.admins where user_id = auth.uid());
 $$;
 
 revoke execute on function private.is_admin() from public, anon;

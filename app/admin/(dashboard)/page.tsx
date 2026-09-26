@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Products" };
 
 export default async function AdminProductsPage({ searchParams }: PageProps<"/admin">) {
   const { supabase } = await requireAdmin();
-  const { saved, deleted } = await searchParams;
+  const { saved, deleted, twostep, password } = await searchParams;
 
   const { data, error } = await supabase
     .from("products")
@@ -19,7 +19,15 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
 
   const products = (data ?? []) as ProductRow[];
   const notice =
-    typeof saved === "string" ? `Saved “${saved}”.` : typeof deleted === "string" ? `Deleted “${deleted}”.` : null;
+    typeof saved === "string"
+      ? `Saved “${saved}”. Changes are live on the website.`
+      : typeof deleted === "string"
+        ? `Deleted “${deleted}”. Changes are live on the website.`
+        : twostep === "on"
+          ? "Two-step sign-in is on. You'll need a code from your authenticator app each time you sign in."
+          : password === "changed"
+            ? "Your password has been changed."
+            : null;
 
   return (
     <>
@@ -38,7 +46,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
 
       {notice && (
         <p role="status" className="mt-8 rounded-2xl border border-ink/10 bg-white px-5 py-3.5 text-sm text-ink/80">
-          {notice} Changes are live on the website.
+          {notice}
         </p>
       )}
 
