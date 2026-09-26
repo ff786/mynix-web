@@ -1,26 +1,118 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-sans: var(--font-inter), "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
 }
 
+/*
+ * Section themes. Colours are variables that flip per section, so `text-ink`,
+ * `bg-canvas`, `border-ink/10`, `text-accent`… adapt to wherever they render.
+ * `inline` makes utilities read the variables at the element, not at :root.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--theme-ink);
+  --color-canvas: var(--theme-canvas);
+  --color-accent: var(--theme-accent);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root,
+[data-theme="dark"] {
+  --theme-ink: #ffffff;
+  --theme-canvas: #050505;
+  --theme-accent: #9fb0cf; /* navy tint — readable on black */
+}
+
+[data-theme="light"],
+/* Fixed chrome follows the section beneath it (set on <html> by the page). */
+html[data-nav-theme="light"] .nav-themed,
+html[data-badge-theme="light"] .badge-themed {
+  --theme-ink: #1d1d1f;
+  --theme-canvas: #f5f5f7;
+  --theme-accent: #1c2e4a; /* deep navy */
+}
+
+[data-theme] {
+  color: var(--theme-ink);
+}
+
+/* Cross-fade text and rules when a section's theme flips mid-scroll. In the base
+   layer so any utility that sets its own transition still wins. */
+@layer base {
+  [data-section-bg],
+  [data-section-bg] * {
+    transition-property: color, border-color;
+    transition-duration: 400ms;
+    transition-timing-function: ease;
   }
 }
 
+:root {
+  /* Page background: the hero drives it (#FFFFFF → #050505), then SectionThemeController. */
+  --page-bg: #050505;
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--page-bg);
+  scrollbar-width: thin;
+  scrollbar-color: rgb(128 128 128 / 0.45) var(--page-bg);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply font-sans tracking-tight;
+  background: var(--page-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Softly fade the canvas edges into the page so frame boundaries never show. */
+.canvas-feather {
+  --feather: 3%;
+  mask-image:
+    linear-gradient(to right, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
+  mask-composite: intersect;
+}
+
+::selection {
+  background: #1c2e4a;
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Adaptive scrollbar — track follows the page, neutral thumb.       */
+/* ------------------------------------------------------------------ */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--page-bg);
+  box-shadow: inset 1px 0 0 rgb(128 128 128 / 0.12);
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background: rgb(128 128 128 / 0.45) padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(128 128 128 / 0.7) padding-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
 }
