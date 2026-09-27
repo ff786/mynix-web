@@ -9,7 +9,7 @@ import FlagshipSpecs from "@/components/showcase/FlagshipSpecs";
 import NewsletterSection from "@/components/newsletter/NewsletterSection";
 import ProductRanges from "@/components/showcase/ProductRanges";
 import { ArrowRight } from "lucide-react";
-import { getProducts } from "@/lib/products";
+import { getStorefront } from "@/lib/catalog";
 
 // The hero opens on a white studio backdrop.
 export const viewport: Viewport = {
@@ -17,9 +17,9 @@ export const viewport: Viewport = {
 };
 
 export default async function Home() {
-  const products = await getProducts();
-  const flagship = products.find((p) => p.flagship) ?? products[0];
-  const flagshipRef = { name: flagship?.name ?? "MYNIX Gemology Torch", sku: flagship?.sku ?? "" };
+  const { products } = await getStorefront();
+  const flagship = products.find((p) => p.flagship);
+  const flagshipRef = { id: flagship?.id ?? "", name: flagship?.name ?? "MYNIX Gemology Torch" };
 
   return (
     <main>

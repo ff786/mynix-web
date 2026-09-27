@@ -1,13 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CATEGORIES } from "@/data/products";
-import type { CategoryId } from "@/types/product";
+import type { ProductCategory } from "@/types/product";
 import { cn } from "@/utils/cn";
 
-export type CategoryFilterValue = CategoryId | "all";
+/** A category slug from the POS, or "all". */
+export type CategoryFilterValue = string;
 
 type CategoryFilterProps = {
+  categories: ProductCategory[];
   value: CategoryFilterValue;
   onChange: (value: CategoryFilterValue) => void;
   counts: Record<CategoryFilterValue, number>;
@@ -15,19 +16,16 @@ type CategoryFilterProps = {
   layoutId: string;
 };
 
-const OPTIONS: { id: CategoryFilterValue; label: string }[] = [
-  { id: "all", label: "All Tools" },
-  ...CATEGORIES.map(({ id, label }) => ({ id, label })),
-];
+export default function CategoryFilter({ categories, value, onChange, counts, layoutId }: CategoryFilterProps) {
+  const options = [{ id: "all", label: "All Tools" }, ...categories.map(({ id, name }) => ({ id, label: name }))];
 
-export default function CategoryFilter({ value, onChange, counts, layoutId }: CategoryFilterProps) {
   return (
     <div
       role="group"
       aria-label="Filter by category"
       className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden"
     >
-      {OPTIONS.map((option) => {
+      {options.map((option) => {
         const active = option.id === value;
         return (
           <button
@@ -51,7 +49,7 @@ export default function CategoryFilter({ value, onChange, counts, layoutId }: Ca
             <span className="relative">
               {option.label}
               <span className={cn("ml-2 tabular-nums", active ? "text-black/50" : "text-white/30")}>
-                {counts[option.id]}
+                {counts[option.id] ?? 0}
               </span>
             </span>
           </button>

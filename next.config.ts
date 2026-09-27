@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
 /**
  * Baseline hardening for every page. The CSP only sets directives that can't
  * break the site's scripts or styles: no framing (clickjacking), no plugins,
@@ -17,10 +15,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  images: {
-    // Product photos uploaded through the admin live in Supabase Storage.
-    remotePatterns: supabaseUrl ? [new URL(`${supabaseUrl}/storage/v1/object/public/**`)] : [],
-  },
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

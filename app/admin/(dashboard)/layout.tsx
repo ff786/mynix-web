@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </Link>
             <nav className="hidden items-center gap-6 text-sm sm:flex">
               <Link href="/admin" className="text-ink/70 transition-colors hover:text-ink">
-                Products
+                Overview
               </Link>
               <Link href="/admin/subscribers" className="text-ink/70 transition-colors hover:text-ink">
                 Subscribers

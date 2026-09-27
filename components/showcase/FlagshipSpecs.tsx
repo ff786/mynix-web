@@ -2,14 +2,13 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { BatteryFull, Cpu, Focus, Power, Ruler, ShieldCheck, Target, Zap, type LucideIcon } from "lucide-react";
+import { BatteryFull, Cpu, Focus, Power, Ruler, ShieldCheck, ShoppingBag, Target, Zap, type LucideIcon } from "lucide-react";
 import Button from "@/components/ui/Button";
-import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 import Eyebrow from "@/components/ui/text/Eyebrow";
 import Reveal from "@/components/ui/text/Reveal";
 import RevealText from "@/components/ui/text/RevealText";
 import type { ProductRef } from "@/types/product";
-import { getWhatsAppInquiryUrl } from "@/utils/whatsapp";
+import { flagshipHref } from "@/utils/links";
 
 type Spec = { icon: LucideIcon; label: string; value: string };
 
@@ -86,9 +85,9 @@ export default function FlagshipSpecs({ flagship }: { flagship: ProductRef }) {
         </dl>
 
         <motion.div {...reveal} className="mt-12 flex flex-col gap-3 sm:flex-row">
-          <Button href={getWhatsAppInquiryUrl(flagship.name, flagship.sku)} external size="lg">
-            <WhatsAppIcon className="h-5 w-5" />
-            Request a Quote
+          <Button href={flagshipHref(flagship)} size="lg">
+            <ShoppingBag className="h-5 w-5" />
+            Buy now
           </Button>
           <Button href="#experience" variant="secondary" size="lg">
             Replay the teardown

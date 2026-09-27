@@ -8,13 +8,15 @@ import ProductCard from "@/components/catalog/ProductCard";
 import ProductModal from "@/components/catalog/ProductModal";
 import Button from "@/components/ui/Button";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
-import { CATEGORIES, CATEGORY_BY_ID } from "@/data/products";
-import type { Product } from "@/types/product";
+import type { Product, ProductCategory } from "@/types/product";
 import { getWhatsAppGeneralUrl } from "@/utils/whatsapp";
 
 type ProductGridProps = {
   products: Product[];
+  categories: ProductCategory[];
   initialCategory?: CategoryFilterValue;
+  /** Open this product's details on arrival (e.g. from "Order the kit"). */
+  initialProductId?: string;
   /** Show at most this many results, with a link through to the full catalog. */
   limit?: number;
 };
@@ -23,30 +25,31 @@ const normalise = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " 
 
 const searchText = (p: Product) =>
   normalise(
-    [p.name, p.sku, p.description, CATEGORY_BY_ID[p.category]?.title ?? "", ...p.features, ...(p.variants ?? [])].join(" "),
+    [p.name, p.categoryName, p.description, ...p.features].join(" "),
   );
 
-export default function ProductGrid({ products, initialCategory = "all", limit }: ProductGridProps) {
+export default function ProductGrid({ products, categories, initialCategory = "all", initialProductId, limit }: ProductGridProps) {
   const [category, setCategory] = useState<CategoryFilterValue>(initialCategory);
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Product | null>(null);
+  const [selected, setSelected] = useState<Product | null>(
+    () => products.find((p) => p.id === initialProductId) ?? null,
+  );
   const deferredQuery = useDeferredValue(query);
   const closeModal = useCallback(() => setSelected(null), []);
   const uid = useId();
 
   // Pre-computed search haystack per product.
-  const index = useMemo(() => new Map(products.map((p) => [p.sku, searchText(p)])), [products]);
+  const index = useMemo(() => new Map(products.map((p) => [p.id, searchText(p)])), [products]);
   const terms = useMemo(() => normalise(deferredQuery).split(" ").filter(Boolean), [deferredQuery]);
 
   // Counts reflect the current search so tabs never promise empty results.
   const searched = useMemo(
-    () => products.filter((p) => terms.every((term) => (index.get(p.sku) ?? "").includes(term))),
+    () => products.filter((p) => terms.every((term) => (index.get(p.id) ?? "").includes(term))),
     [products, index, terms],
   );
   const counts = useMemo(() => {
-    const result = { all: searched.length } as Record<CategoryFilterValue, number>;
-    for (const c of CATEGORIES) result[c.id] = 0;
-    for (const p of searched) result[p.category] += 1;
+    const result: Record<CategoryFilterValue, number> = { all: searched.length };
+    for (const p of searched) result[p.category] = (result[p.category] ?? 0) + 1;
     return result;
   }, [searched]);
 
@@ -57,7 +60,7 @@ export default function ProductGrid({ products, initialCategory = "all", limit }
   return (
     <div>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <CategoryFilter value={category} onChange={setCategory} counts={counts} layoutId={`${uid}-pill`} />
+        <CategoryFilter categories={categories} value={category} onChange={setCategory} counts={counts} layoutId={`${uid}-pill`} />
 
         <label className="relative block w-full lg:max-w-xs">
           <span className="sr-only">Search products</span>
@@ -93,7 +96,7 @@ export default function ProductGrid({ products, initialCategory = "all", limit }
           <AnimatePresence mode="popLayout" initial={false}>
             {visible.map((product, i) => (
               <motion.li
-                key={product.sku}
+                key={product.id}
                 layout
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}

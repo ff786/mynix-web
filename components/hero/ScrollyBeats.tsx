@@ -7,7 +7,7 @@ import { buttonClasses } from "@/components/ui/Button";
 import { EASE_OUT, WordMask } from "@/components/ui/text/RevealText";
 import type { ProductRef } from "@/types/product";
 import { cn } from "@/utils/cn";
-import { getWhatsAppInquiryUrl } from "@/utils/whatsapp";
+import { flagshipHref } from "@/utils/links";
 
 // All timings are fractions of total hero scroll.
 const FADE = 0.05; // beat container fade
@@ -304,9 +304,7 @@ function CtaButton({
   const pointerEvents = useTransform(progress, (v) => (v > start + FADE / 2 ? "auto" : "none"));
   return (
     <motion.a
-      href={getWhatsAppInquiryUrl(flagship.name, flagship.sku)}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={flagshipHref(flagship)}
       style={{ pointerEvents }}
       className={buttonClasses({ size: "lg", className: "mt-4 w-fit" })}
     >

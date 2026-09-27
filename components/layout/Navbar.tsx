@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMotionValueEvent, useScroll } from "framer-motion";
 import { Menu } from "lucide-react";
+import CartButton from "@/components/cart/CartButton";
 import MobileNav from "@/components/layout/MobileNav";
 import { NAV_ITEMS, navHref, sectionHref } from "@/components/layout/navigation";
 import { buttonClasses } from "@/components/ui/Button";
@@ -67,6 +68,7 @@ export default function Navbar() {
               <WhatsAppIcon className="h-[18px] w-[18px]" />
               Quick Inquiry
             </a>
+            <CartButton />
             <button
               type="button"
               onClick={() => setMenuOpen(true)}

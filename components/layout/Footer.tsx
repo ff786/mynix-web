@@ -6,7 +6,6 @@ import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 import Eyebrow from "@/components/ui/text/Eyebrow";
 import Reveal from "@/components/ui/text/Reveal";
 import RevealText from "@/components/ui/text/RevealText";
-import { CATEGORIES } from "@/data/products";
 import { WHATSAPP_DISPLAY, WHATSAPP_NUMBER, getWhatsAppGeneralUrl } from "@/utils/whatsapp";
 
 const QUICK_LINKS = [
@@ -15,6 +14,12 @@ const QUICK_LINKS = [
   { label: "Products", href: "/#products" },
   { label: "About Us", href: "/#about" },
   { label: "Full Catalog", href: "/catalog" },
+];
+
+const SHOP_LINKS = [
+  { label: "Shop the catalog", href: "/catalog" },
+  { label: "Your cart", href: "/cart" },
+  { label: "Track an order", href: "/track" },
 ];
 
 export default function Footer() {
@@ -73,14 +78,11 @@ export default function Footer() {
             ))}
           </FooterColumn>
 
-          <FooterColumn title="Products">
-            {CATEGORIES.map((category) => (
-              <li key={category.id}>
-                <Link
-                  href={`/catalog?category=${category.id}`}
-                  className="text-sm text-ink/60 transition-colors hover:text-ink"
-                >
-                  {category.label}
+          <FooterColumn title="Shop">
+            {SHOP_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="text-sm text-ink/60 transition-colors hover:text-ink">
+                  {link.label}
                 </Link>
               </li>
             ))}

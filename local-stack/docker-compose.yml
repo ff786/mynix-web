@@ -1,0 +1,41 @@
+# Local copy of the MYNIX platform for testing the website against the POS.
+# Sample data only — never production. Start everything with ./setup.sh.
+name: mynix-local
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: mynix_pos
+      POSTGRES_USER: mynix
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?run ./setup.sh first}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pos-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mynix -d mynix_pos"]
+      interval: 3s
+      retries: 20
+
+  # Built from your local POS backend checkout (the branch you have open).
+  pos-backend:
+    build: ${POS_BACKEND_DIR:-../../../Mynix POS/backend}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/mynix_pos
+      SPRING_DATASOURCE_USERNAME: mynix
+      SPRING_DATASOURCE_PASSWORD: ${LOCAL_DB_PASSWORD}
+      JWT_SECRET: ${LOCAL_JWT_SECRET}
+      TEXTLK_API_TOKEN: disabled-locally
+      # Never send real SMS from the local copy.
+      MYNIX_SMS_ENABLED: "false"
+      MYNIX_PUBLIC_INVOICE_BASE_URL: http://localhost:5173/invoice
+      PORT: "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  pos-data:

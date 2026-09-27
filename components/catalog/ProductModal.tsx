@@ -2,13 +2,12 @@
 
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, X } from "lucide-react";
+import { Check, Minus, Plus, X } from "lucide-react";
+import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductMedia from "@/components/catalog/ProductMedia";
-import { buttonClasses } from "@/components/ui/Button";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
-import { CATEGORY_BY_ID } from "@/data/products";
 import type { Product } from "@/types/product";
-import { cn } from "@/utils/cn";
+import { formatLkr } from "@/utils/money";
 import { useModalBehaviour } from "@/utils/useModalBehaviour";
 import { getWhatsAppInquiryUrl } from "@/utils/whatsapp";
 
@@ -20,19 +19,17 @@ type ProductModalProps = {
 export default function ProductModal({ product, onClose }: ProductModalProps) {
   return (
     <AnimatePresence>
-      {product && <ModalPanel key={product.sku} product={product} onClose={onClose} />}
+      {product && <ModalPanel key={product.id} product={product} onClose={onClose} />}
     </AnimatePresence>
   );
 }
 
 function ModalPanel({ product, onClose }: { product: Product; onClose: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [variant, setVariant] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
   useModalBehaviour(true, onClose, panelRef);
 
-  const category = CATEGORY_BY_ID[product.category];
-  const titleId = `product-${product.sku}-title`;
-  const inquiryName = variant ? `${product.name} — ${variant}` : product.name;
+  const titleId = `product-${product.id}-title`;
 
   return (
     <motion.div
@@ -74,66 +71,68 @@ function ModalPanel({ product, onClose }: { product: Product; onClose: () => voi
 
         <div className="flex flex-col p-6 sm:p-10">
           <span className="w-fit rounded-full border border-white/10 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/60">
-            {category.title}
+            {product.categoryName}
           </span>
 
           <h2 id={titleId} className="mt-5 text-2xl font-semibold leading-tight tracking-tight text-white/90 sm:text-3xl">
             {product.name}
           </h2>
-          <p className="mt-3 leading-relaxed text-white/60">{product.description}</p>
+          <p className="mt-4 text-2xl font-semibold tabular-nums text-white/90">{formatLkr(product.price)}</p>
+          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/40">
+            {product.inStock ? "In stock" : "Sold out"}
+          </p>
+          {product.description && <p className="mt-5 leading-relaxed text-white/60">{product.description}</p>}
 
-          <h3 className="mt-8 text-xs font-medium uppercase tracking-[0.25em] text-white/40">Key features</h3>
-          <ul className="mt-4 space-y-2.5">
-            {product.features.map((feature) => (
-              <li key={feature} className="flex gap-3 text-sm text-white/75">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                {feature}
-              </li>
-            ))}
-          </ul>
-
-          {product.variants && (
-            <fieldset className="mt-8">
-              <legend className="text-xs font-medium uppercase tracking-[0.25em] text-white/40">
-                Options <span className="normal-case tracking-normal text-white/30">(optional)</span>
-              </legend>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {product.variants.map((option) => {
-                  const selected = option === variant;
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setVariant(selected ? null : option)}
-                      className={cn(
-                        "rounded-full border px-3.5 py-1.5 text-xs transition-colors",
-                        selected
-                          ? "border-white bg-white text-[#1d1d1f]"
-                          : "border-white/10 text-white/60 hover:border-white/30 hover:text-white",
-                      )}
-                    >
-                      {option}
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
+          {product.features.length > 0 && (
+            <>
+              <h3 className="mt-8 text-xs font-medium uppercase tracking-[0.25em] text-white/40">Key features</h3>
+              <ul className="mt-4 space-y-2.5">
+                {product.features.map((feature) => (
+                  <li key={feature} className="flex gap-3 text-sm text-white/75">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           <div className="mt-10 flex flex-col gap-3 sm:mt-auto sm:pt-10">
+            {product.inStock && (
+              <div className="flex items-center justify-between rounded-full border border-white/10 px-2 py-1.5">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1}
+                  aria-label="Decrease quantity"
+                  className="rounded-full p-2 text-white/70 hover:text-white disabled:opacity-30"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span aria-live="polite" className="text-sm tabular-nums text-white/80">
+                  Quantity {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.min(product.maxQuantity, q + 1))}
+                  disabled={quantity >= product.maxQuantity}
+                  aria-label="Increase quantity"
+                  className="rounded-full p-2 text-white/70 hover:text-white disabled:opacity-30"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            <AddToCartButton product={product} quantity={quantity} size="lg" />
             <a
-              href={getWhatsAppInquiryUrl(inquiryName, product.sku)}
+              href={getWhatsAppInquiryUrl(product.name)}
               target="_blank"
               rel="noopener noreferrer"
-              className={buttonClasses({ size: "lg" })}
+              className="inline-flex items-center justify-center gap-2 py-2 text-sm text-white/55 transition-colors hover:text-white"
             >
-              <WhatsAppIcon className="h-5 w-5" />
-              Buy / Request Quote
+              <WhatsAppIcon className="h-4 w-4" />
+              Questions? Ask us on WhatsApp
             </a>
-            <p className="text-center text-xs text-white/40">
-              Opens WhatsApp with your inquiry pre-filled{variant ? ` (${variant})` : ""}.
-            </p>
           </div>
         </div>
       </motion.div>

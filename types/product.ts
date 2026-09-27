@@ -1,7 +1,47 @@
-export type CategoryId = "torches" | "optical" | "scales" | "lapidary" | "accessories";
+/* -------------------------------------------------------------------------- */
+/*  Storefront products — safe to send to browsers                            */
+/* -------------------------------------------------------------------------- */
 
-export interface Category {
-  id: CategoryId;
+/**
+ * A product on the website. Name, category, price and availability come from
+ * the POS; description, features and photo from the website's own content.
+ * Never carries POS identifiers (barcode, internal id) or stock counts.
+ */
+export interface Product {
+  /** Website id (URL slug). */
+  id: string;
+  name: string;
+  /** Category slug, derived from the POS category name. */
+  category: string;
+  categoryName: string;
+  /** Selling price in LKR. */
+  price: number;
+  inStock: boolean;
+  /** Most a customer can order at once (limited by stock). */
+  maxQuantity: number;
+  description: string;
+  features: string[];
+  /** Website URL of the photo; cards fall back to a category illustration. */
+  image?: string;
+  flagship?: boolean;
+}
+
+export interface ProductCategory {
+  id: string;
+  name: string;
+}
+
+/** What the hero and Flagship section need to link to the flagship product. */
+export type ProductRef = Pick<Product, "id" | "name">;
+
+/* -------------------------------------------------------------------------- */
+/*  Website-written content (data/products.ts), matched to POS products        */
+/* -------------------------------------------------------------------------- */
+
+export type ContentCategoryId = "torches" | "optical" | "scales" | "lapidary" | "accessories";
+
+export interface ContentCategory {
+  id: ContentCategoryId;
   /** Short label used on filter tabs. */
   label: string;
   /** Full name used in headings and badges. */
@@ -9,43 +49,17 @@ export interface Category {
   description: string;
 }
 
-export interface Product {
-  /** Database id (absent for the bundled fallback list). */
-  id?: string;
-  /** Product code — used as the ID in WhatsApp inquiries and search; not displayed. */
+export interface ProductContent {
   sku: string;
+  /** Matched against the POS product name (case and punctuation ignored). */
   name: string;
-  category: CategoryId;
+  category: ContentCategoryId;
   /** One-line summary shown on the card. */
   description: string;
   /** Bullet points shown in the quick-view modal. */
   features: string[];
-  /** Selectable options (grit sizes, grid counts, …) — included in the WhatsApp inquiry. */
   variants?: string[];
-  /** Image URL (Supabase Storage) or a path under /public. Cards fall back to a category illustration when absent. */
+  /** A path under /public. */
   image?: string;
   flagship?: boolean;
 }
-
-export const CATEGORY_IDS: CategoryId[] = ["torches", "optical", "scales", "lapidary", "accessories"];
-
-/** A row of the `products` table (see supabase/schema.sql). */
-export interface ProductRow {
-  id: string;
-  sku: string;
-  name: string;
-  category: CategoryId;
-  description: string;
-  features: string[];
-  variants: string[];
-  /** Storage object path, a /public path, or an absolute URL. */
-  image: string | null;
-  flagship: boolean;
-  published: boolean;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-/** What the hero and Flagship section need to build a WhatsApp inquiry. */
-export type ProductRef = Pick<Product, "name" | "sku">;

@@ -1,6 +1,6 @@
-import type { Category, CategoryId, Product } from "@/types/product";
+import type { ContentCategory, ContentCategoryId, ProductContent } from "@/types/product";
 
-export const CATEGORIES: Category[] = [
+export const CATEGORIES: ContentCategory[] = [
   {
     id: "torches",
     label: "Inspection Lights",
@@ -34,11 +34,11 @@ export const CATEGORIES: Category[] = [
 ];
 
 export const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((c) => [c.id, c])) as Record<
-  CategoryId,
-  Category
+  ContentCategoryId,
+  ContentCategory
 >;
 
-export const PRODUCTS: Product[] = [
+export const PRODUCTS: ProductContent[] = [
   /* ------------------------------------------------------------------------ */
   /*  1. Inspection & Torch Lights                                             */
   /* ------------------------------------------------------------------------ */
