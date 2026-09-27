@@ -20,7 +20,9 @@ export async function GET(_request: Request, { params }: RouteContext<"/media/pr
 
   try {
     const upstream = await fetchPublicImage(entry.posImageUrl);
-    const type = upstream.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ?? "";
+    const declared = upstream.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ?? "";
+    // Some shops send the non-standard "image/jpg".
+    const type = declared === "image/jpg" || declared === "image/pjpeg" ? "image/jpeg" : declared;
     if (!upstream.ok || !ALLOWED_TYPES.has(type)) return notFound();
 
     const body = await readLimited(upstream, MAX_BYTES);
