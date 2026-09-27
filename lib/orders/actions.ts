@@ -1,12 +1,13 @@
 "use server";
 
-import { createHash } from "node:crypto";
-import { headers } from "next/headers";
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { CATALOG_TAG, getCatalogEntries } from "@/lib/catalog";
-import { deliveryFee } from "@/lib/orders/config";
+import { clearVerification, getCustomerSession, getVerification } from "@/lib/customer/session";
+import { bankTransferDetails, deliveryFee } from "@/lib/orders/config";
+import { mobileSchema } from "@/lib/phone";
 import { PosError, posRequest } from "@/lib/pos/client";
+import { limited, visitorKey } from "@/lib/rate-limit";
 
 /**
  * Checkout and order tracking. The browser only sends website product ids and
@@ -18,7 +19,7 @@ export type OrderLine = { name: string; quantity: number; unitPrice: number; lin
 export type OrderSummary = {
   invoiceNumber: string;
   status: "PLACED" | "DISPATCHED" | "DELIVERED" | "CANCELLED";
-  paymentMethod: "CASH_ON_DELIVERY" | "CARD";
+  paymentMethod: "CASH_ON_DELIVERY" | "BANK_TRANSFER" | "CARD";
   items: OrderLine[];
   subtotal: number;
   deliveryFee: number;
@@ -29,13 +30,6 @@ export type OrderSummary = {
   placedAt: string;
 };
 export type ActionResult = { ok: true; order: OrderSummary } | { ok: false; error: string };
-
-const phoneSchema = z
-  .string()
-  .trim()
-  .transform((v) => v.replace(/[^0-9]/g, ""))
-  .transform((d) => (d.length === 11 && d.startsWith("947") ? `0${d.slice(2)}` : d.length === 9 && d.startsWith("7") ? `0${d}` : d))
-  .refine((d) => /^07[0-9]{8}$/.test(d), "Enter a Sri Lankan mobile number, e.g. 077 123 4567.");
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 const optionalText = (max: number) =>
@@ -52,9 +46,9 @@ const checkoutSchema = z.object({
     .array(z.object({ id: z.string().min(1).max(100), quantity: z.number().int().min(1).max(50) }))
     .min(1, "Your cart is empty.")
     .max(30),
-  paymentMethod: z.enum(["CASH_ON_DELIVERY", "CARD"]),
+  paymentMethod: z.enum(["CASH_ON_DELIVERY", "BANK_TRANSFER", "CARD"]),
   customerName: text(150),
-  customerPhone: phoneSchema,
+  customerPhone: mobileSchema,
   customerEmail: z.union([z.email().max(254), z.literal("")]).optional(),
   addressLine1: text(200),
   addressLine2: optionalText(200),
@@ -76,7 +70,26 @@ export async function placeOrder(input: CheckoutInput): Promise<ActionResult> {
   const order = parsed.data;
 
   if (order.paymentMethod === "CARD") {
-    return { ok: false, error: "Card payment is coming soon. Please choose cash on delivery." };
+    return { ok: false, error: "Card payment is coming soon. Please choose another payment method." };
+  }
+
+  if (order.paymentMethod === "BANK_TRANSFER" && !bankTransferDetails()) {
+    return { ok: false, error: "Bank transfer isn't available right now. Please choose cash on delivery." };
+  }
+
+  // Who is ordering: a signed-in customer (their number is fixed), or a guest
+  // who verified this number by SMS code in this browser.
+  const session = await getCustomerSession();
+  let identity: { customerId: number } | { verificationToken: string };
+  if (session) {
+    order.customerPhone = session.phone;
+    identity = { customerId: session.customerId };
+  } else {
+    const verification = await getVerification("CHECKOUT");
+    if (!verification || verification.phone !== order.customerPhone) {
+      return { ok: false, error: "Please verify your mobile number with the SMS code first." };
+    }
+    identity = { verificationToken: verification.token };
   }
 
   const visitor = await visitorKey();
@@ -104,6 +117,7 @@ export async function placeOrder(input: CheckoutInput): Promise<ActionResult> {
       method: "POST",
       body: {
         requestId: order.requestId,
+        ...identity,
         items,
         paymentMethod: order.paymentMethod,
         deliveryFee: deliveryFee(),
@@ -119,6 +133,7 @@ export async function placeOrder(input: CheckoutInput): Promise<ActionResult> {
       },
     });
     updateTag(CATALOG_TAG); // availability changed
+    if (!session) await clearVerification("CHECKOUT");
     return { ok: true, order: placed };
   } catch (error) {
     if (error instanceof PosError && error.status === 400 && /insufficient stock/i.test(error.message)) {
@@ -136,7 +151,7 @@ const trackSchema = z.object({
     .trim()
     .toUpperCase()
     .regex(/^INV-[0-9]{8}-[0-9]{1,6}$/, "Enter the order number from your confirmation, e.g. INV-20260928-0012."),
-  phone: phoneSchema,
+  phone: mobileSchema,
 });
 
 export async function trackOrder(input: z.input<typeof trackSchema>): Promise<ActionResult> {
@@ -160,28 +175,4 @@ export async function trackOrder(input: z.input<typeof trackSchema>): Promise<Ac
     console.error("[orders] Tracking failed:", error instanceof Error ? error.message : error);
     return { ok: false, error: "Order tracking is temporarily unavailable." };
   }
-}
-
-// --- rate limiting -------------------------------------------------------------
-// Per server instance: a first line of defence against scripted orders. COD
-// orders reserve stock, so a shared limit (e.g. Redis) should replace this
-// before heavy traffic.
-
-const hits = new Map<string, number[]>();
-
-function limited(key: string, max: number, minutes: number): boolean {
-  const now = Date.now();
-  const recent = (hits.get(key) ?? []).filter((t) => now - t < minutes * 60_000);
-  if (recent.length >= max) {
-    hits.set(key, recent);
-    return true;
-  }
-  recent.push(now);
-  hits.set(key, recent);
-  return false;
-}
-
-async function visitorKey(): Promise<string> {
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  return createHash("sha256").update(`mynix:${ip}`).digest("hex").slice(0, 32);
 }

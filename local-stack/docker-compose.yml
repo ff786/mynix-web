@@ -32,6 +32,9 @@ services:
       TEXTLK_API_TOKEN: disabled-locally
       # Never send real SMS from the local copy.
       MYNIX_SMS_ENABLED: "false"
+      # With SMS off, write verification codes to the backend log instead
+      # (docker compose logs pos-backend | grep "verification code").
+      MYNIX_OTP_LOG_CODES: "true"
       MYNIX_PUBLIC_INVOICE_BASE_URL: http://localhost:5173/invoice
       PORT: "8080"
     ports:

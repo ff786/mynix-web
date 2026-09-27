@@ -66,6 +66,10 @@ done
   echo "POS_STORE_USERNAME=online-store"
   echo "POS_STORE_PASSWORD=$LOCAL_STORE_PASSWORD"
 } >> "$ENV_FILE"
+# Customer sign-in cookies, and sample bank details — only if not set yet.
+grep -q '^CUSTOMER_SESSION_SECRET=' "$ENV_FILE" || echo "CUSTOMER_SESSION_SECRET=$(openssl rand -hex 32)" >> "$ENV_FILE"
+grep -q '^BANK_TRANSFER_DETAILS=' "$ENV_FILE" ||
+  echo 'BANK_TRANSFER_DETAILS="Bank: Sample Bank (local test)\nAccount name: MYNIX (PVT) LTD\nAccount no: 0000 0000 0000\nBranch: Colombo"' >> "$ENV_FILE"
 
 cat <<EOF
 
@@ -77,6 +81,8 @@ Local platform is running.
                   username: $ADMIN_USER
                   password: $LOCAL_ADMIN_PASSWORD   (local copy only)
   Website       npm run dev  →  http://localhost:3000
+  SMS codes     SMS is off locally; read codes with:
+                docker compose -f local-stack/docker-compose.yml logs pos-backend | grep "verification code"
 
 Stop:   docker compose -f local-stack/docker-compose.yml stop
 Reset:  ./local-stack/setup.sh --reset

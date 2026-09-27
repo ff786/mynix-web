@@ -19,6 +19,7 @@ const QUICK_LINKS = [
 const SHOP_LINKS = [
   { label: "Shop the catalog", href: "/catalog" },
   { label: "Your cart", href: "/cart" },
+  { label: "Your account", href: "/account" },
   { label: "Track an order", href: "/track" },
 ];
 

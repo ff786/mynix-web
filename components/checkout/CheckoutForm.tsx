@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useCart } from "@/components/cart/CartProvider";
 import { useCartLines } from "@/components/cart/CartView";
+import PhoneVerifier from "@/components/customer/PhoneVerifier";
 import OrderSummaryCard from "@/components/orders/OrderSummaryCard";
 import { placeOrder, type OrderSummary } from "@/lib/orders/actions";
 import type { Product } from "@/types/product";
@@ -31,7 +32,18 @@ function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: str
   );
 }
 
-export default function CheckoutForm({ products, deliveryFee }: { products: Product[]; deliveryFee: number }) {
+type CheckoutFormProps = {
+  products: Product[];
+  deliveryFee: number;
+  /** Signed-in customer: their number is already verified. */
+  customer: { name: string; phone: string } | null;
+  /** Shown for bank transfer; the option is hidden when not configured. */
+  bankDetails: string | null;
+};
+
+type PaymentChoice = "CASH_ON_DELIVERY" | "BANK_TRANSFER";
+
+export default function CheckoutForm({ products, deliveryFee, customer, bankDetails }: CheckoutFormProps) {
   const { ready, clear } = useCart();
   const { valid, subtotal, hasProblems } = useCartLines(products);
   const [pending, startTransition] = useTransition();
@@ -39,6 +51,9 @@ export default function CheckoutForm({ products, deliveryFee }: { products: Prod
   const [placed, setPlaced] = useState<OrderSummary | null>(null);
   // One id per checkout: a retry after a network error can't create a second order.
   const requestId = useRef<string | null>(null);
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
+  const [payment, setPayment] = useState<PaymentChoice>("CASH_ON_DELIVERY");
+  const phone = customer?.phone ?? verifiedPhone;
 
   if (placed) {
     return (
@@ -49,6 +64,16 @@ export default function CheckoutForm({ products, deliveryFee }: { products: Prod
           We&apos;ll call you to confirm delivery. You&apos;ll also get an SMS with your invoice. Keep your order
           number to track it.
         </p>
+        {placed.paymentMethod === "BANK_TRANSFER" && bankDetails && (
+          <div className="mt-8 rounded-3xl border border-amber-300/30 bg-amber-300/5 p-6">
+            <p className="text-sm font-medium text-white/90">Please transfer the total to:</p>
+            <p className="mt-3 whitespace-pre-line font-mono text-sm leading-relaxed text-white/80">{bankDetails}</p>
+            <p className="mt-3 text-sm text-white/60">
+              Use your order number <span className="font-mono text-white/85">{placed.invoiceNumber}</span> as the
+              reference. We&apos;ll dispatch once the payment is received.
+            </p>
+          </div>
+        )}
         <div className="mt-8">
           <OrderSummaryCard order={placed} />
         </div>
@@ -90,9 +115,9 @@ export default function CheckoutForm({ products, deliveryFee }: { products: Prod
       const result = await placeOrder({
         requestId: requestId.current!,
         items: valid.map(({ line }) => ({ id: line.id, quantity: line.quantity })),
-        paymentMethod: "CASH_ON_DELIVERY",
+        paymentMethod: payment,
         customerName: value("customerName"),
-        customerPhone: value("customerPhone"),
+        customerPhone: phone ?? "",
         customerEmail: value("customerEmail"),
         addressLine1: value("addressLine1"),
         addressLine2: value("addressLine2"),
@@ -118,21 +143,40 @@ export default function CheckoutForm({ products, deliveryFee }: { products: Prod
         <fieldset className="space-y-5">
           <legend className="mb-5 text-xs uppercase tracking-[0.25em] text-white/45">Contact</legend>
           <Field label="Full name" htmlFor="customerName">
-            <input id="customerName" name="customerName" required maxLength={150} autoComplete="name" className={inputClass} />
+            <input
+              id="customerName"
+              name="customerName"
+              required
+              maxLength={150}
+              autoComplete="name"
+              defaultValue={customer?.name}
+              className={inputClass}
+            />
           </Field>
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Mobile number" htmlFor="customerPhone" hint="We'll call to confirm and SMS your invoice.">
-              <input
-                id="customerPhone"
-                name="customerPhone"
-                required
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="077 123 4567"
-                maxLength={20}
-                className={inputClass}
-              />
-            </Field>
+            <div className="space-y-2">
+              <p className="text-sm text-white/70">Mobile number</p>
+              {customer ? (
+                <p className="rounded-xl border border-white/10 px-4 py-3 text-[15px] text-white/80">
+                  {customer.phone} <span className="text-xs text-white/40">· signed in</span>
+                </p>
+              ) : (
+                <>
+                  <PhoneVerifier
+                    purpose="CHECKOUT"
+                    inputClassName={inputClass}
+                    onVerified={(result) => setVerifiedPhone(result.phone)}
+                    onReset={() => setVerifiedPhone(null)}
+                  />
+                  <p className="text-xs text-white/40">
+                    We verify your number by SMS, call to confirm delivery and SMS your invoice.{" "}
+                    <Link href="/account?next=/checkout" className="underline underline-offset-4 hover:text-white">
+                      Have an account? Sign in
+                    </Link>
+                  </p>
+                </>
+              )}
+            </div>
             <Field label="Email (optional)" htmlFor="customerEmail">
               <input id="customerEmail" name="customerEmail" type="email" maxLength={254} autoComplete="email" className={inputClass} />
             </Field>
@@ -175,13 +219,35 @@ export default function CheckoutForm({ products, deliveryFee }: { products: Prod
         <fieldset>
           <legend className="mb-5 text-xs uppercase tracking-[0.25em] text-white/45">Payment</legend>
           <div className="space-y-3">
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/40 bg-white/[0.04] p-4">
-              <input type="radio" name="paymentMethod" value="CASH_ON_DELIVERY" defaultChecked className="accent-white" />
-              <span>
-                <span className="block text-sm font-medium text-white/90">Cash on delivery</span>
-                <span className="block text-xs text-white/50">Pay the courier when your order arrives.</span>
-              </span>
-            </label>
+            {(
+              [
+                ["CASH_ON_DELIVERY", "Cash on delivery", "Pay the courier when your order arrives."],
+                ...(bankDetails
+                  ? [["BANK_TRANSFER", "Bank transfer", "We'll show our bank details after you order; we dispatch once paid."]]
+                  : []),
+              ] as [PaymentChoice, string, string][]
+            ).map(([value, title, text]) => (
+              <label
+                key={value}
+                className={cn(
+                  "flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors",
+                  payment === value ? "border-white/40 bg-white/[0.04]" : "border-white/10 hover:border-white/25",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value={value}
+                  checked={payment === value}
+                  onChange={() => setPayment(value)}
+                  className="accent-white"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-white/90">{title}</span>
+                  <span className="block text-xs text-white/50">{text}</span>
+                </span>
+              </label>
+            ))}
             <label className="flex items-center gap-3 rounded-xl border border-white/10 p-4 opacity-50">
               <input type="radio" name="paymentMethod" value="CARD" disabled />
               <span>
@@ -225,9 +291,12 @@ export default function CheckoutForm({ products, deliveryFee }: { products: Prod
           </p>
         )}
 
+        {!phone && (
+          <p className="mt-5 text-sm text-white/55">Verify your mobile number to place the order.</p>
+        )}
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || !phone}
           className="mt-6 w-full rounded-full bg-white py-3.5 text-sm font-medium text-[#1d1d1f] transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {pending ? "Placing order…" : "Place order"}
