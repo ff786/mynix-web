@@ -36,6 +36,8 @@ services:
       # (docker compose logs pos-backend | grep "verification code").
       MYNIX_OTP_LOG_CODES: "true"
       MYNIX_PUBLIC_INVOICE_BASE_URL: http://localhost:5173/invoice
+      # Links in website-order SMS (invoice, tracking) point here.
+      MYNIX_WEBSITE_URL: http://localhost:3000
       PORT: "8080"
     ports:
       - "127.0.0.1:8080:8080"
