@@ -4,7 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import SectionThemeController from "@/components/layout/SectionThemeController";
 import WhatsappBadge from "@/components/ui/WhatsappBadge";
 
-/** Public site chrome — kept out of /admin. */
+/** Public site chrome (navbar, footer, cart). */
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <CartProvider>
