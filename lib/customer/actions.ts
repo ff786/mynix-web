@@ -5,6 +5,7 @@ import {
   clearCustomerSession,
   clearVerification,
   customerAccountsEnabled,
+  getCustomerSession,
   getVerification,
   setCustomerSession,
   setVerification,
@@ -83,17 +84,25 @@ export async function checkVerificationCode(input: { phone: string; code: string
 
 type Customer = { id: number; name: string; phone: string };
 
-/** Finishes sign-in / sign-up after the number was verified (name only for new customers). */
-export async function completeSignIn(input: { name?: string }): Promise<Result<{ name: string }>> {
+const emailSchema = z.email("Enter a valid email address.").max(254);
+
+/**
+ * Finishes sign-in / sign-up after the number was verified. New accounts
+ * need an email (and a name if the shop doesn't know the number yet).
+ */
+export async function completeSignIn(input: { name?: string; email?: string }): Promise<Result<{ name: string }>> {
   if (!customerAccountsEnabled) return { ok: false, error: "Accounts are not available yet." };
   const verification = await getVerification("ACCOUNT");
   if (!verification) return { ok: false, error: "Your code has expired. Please request a new one." };
 
   const name = (input.name ?? "").trim().slice(0, 150) || undefined;
+  const rawEmail = (input.email ?? "").trim();
+  const email = rawEmail ? emailSchema.safeParse(rawEmail) : null;
+  if (email && !email.success) return { ok: false, error: email.error.issues[0].message };
   try {
     const customer = await posRequest<Customer>("/store/customers/sign-in", {
       method: "POST",
-      body: { verificationToken: verification.token, name },
+      body: { verificationToken: verification.token, name, email: email?.data },
     });
     await clearVerification("ACCOUNT");
     await setCustomerSession({ customerId: customer.id, phone: customer.phone, name: customer.name });
@@ -102,6 +111,24 @@ export async function completeSignIn(input: { name?: string }): Promise<Result<{
     if (error instanceof PosError && error.status === 400) return { ok: false, error: error.message };
     console.error("[account] Sign-in failed:", error instanceof Error ? error.message : error);
     return { ok: false, error: "We couldn't sign you in right now. Please try again." };
+  }
+}
+
+/** Signed-in customers can change their email. */
+export async function updateEmail(input: { email: string }): Promise<Result<{ email: string }>> {
+  const session = await getCustomerSession();
+  if (!session) return { ok: false, error: "Please sign in again." };
+  const email = emailSchema.safeParse((input.email ?? "").trim());
+  if (!email.success) return { ok: false, error: email.error.issues[0].message };
+
+  try {
+    const customer = await posRequest<{ email: string }>(`/store/customers/${session.customerId}`, {
+      method: "PATCH",
+      body: { email: email.data },
+    });
+    return { ok: true, email: customer.email };
+  } catch {
+    return { ok: false, error: "We couldn't save your email. Please try again." };
   }
 }
 

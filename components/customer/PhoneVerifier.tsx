@@ -14,11 +14,13 @@ type PhoneVerifierProps = {
   /** Reset the verified state (e.g. "use a different number"). */
   onReset?: () => void;
   inputClassName: string;
+  /** Pre-fills the number (e.g. "create an account" after a guest order). */
+  initialPhone?: string;
 };
 
 /** Mobile number → SMS code → verified. The proof is kept server-side in an HttpOnly cookie. */
-export default function PhoneVerifier({ purpose, onVerified, onReset, inputClassName }: PhoneVerifierProps) {
-  const [phone, setPhone] = useState("");
+export default function PhoneVerifier({ purpose, onVerified, onReset, inputClassName, initialPhone = "" }: PhoneVerifierProps) {
+  const [phone, setPhone] = useState(initialPhone);
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"phone" | "code" | "verified">("phone");
   const [error, setError] = useState<string | null>(null);

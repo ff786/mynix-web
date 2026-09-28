@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import EmailEditor from "@/components/customer/EmailEditor";
 import SignInForm from "@/components/customer/SignInForm";
 import SignOutButton from "@/components/customer/SignOutButton";
 import OrderSummaryCard from "@/components/orders/OrderSummaryCard";
+import { getCustomerProfile, type CustomerProfile } from "@/lib/customer/profile";
 import { customerAccountsEnabled, getCustomerSession } from "@/lib/customer/session";
 import type { OrderSummary } from "@/lib/orders/actions";
 import { formatMobile } from "@/lib/phone";
@@ -14,23 +16,19 @@ export const metadata: Metadata = { title: "Your account", robots: { index: fals
 const safeNext = (value: unknown) => (typeof value === "string" && /^\/[a-z0-9/-]*$/.test(value) ? value : "/account");
 
 export default async function AccountPage({ searchParams }: PageProps<"/account">) {
-  const { next } = await searchParams;
+  const { next, phone } = await searchParams;
   const session = await getCustomerSession();
 
   let orders: OrderSummary[] | null = null;
-  let customer: { name: string; phone: string } | null = null;
+  let customer: CustomerProfile | null = null;
   if (session) {
-    try {
-      const [profile, list] = await Promise.all([
-        posRequest<{ name: string; phone: string }>(`/store/customers/${session.customerId}`),
-        posRequest<OrderSummary[]>(`/store/customers/${session.customerId}/orders`),
-      ]);
-      customer = profile;
-      orders = list;
-    } catch {
-      // Account removed/deactivated in the POS, or POS unreachable: fall back to sign-in.
-    }
+    // Account removed/deactivated in the POS, or POS unreachable: fall back to sign-in.
+    customer = await getCustomerProfile();
+    orders = customer
+      ? await posRequest<OrderSummary[]>(`/store/customers/${session.customerId}/orders`).catch(() => null)
+      : null;
   }
+  const initialPhone = typeof phone === "string" ? phone.replace(/[^0-9+ ]/g, "").slice(0, 20) : undefined;
 
   return (
     <main data-theme="dark" data-section-bg="#050505" className="min-h-screen px-6 pb-24 pt-36 sm:px-10 sm:pt-44">
@@ -44,6 +42,9 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
                 {customer.name} · {formatMobile(customer.phone)}
               </p>
               <SignOutButton />
+            </div>
+            <div className="mt-3">
+              <EmailEditor initialEmail={customer.email} />
             </div>
 
             <h2 className="mt-12 text-xs uppercase tracking-[0.25em] text-white/45">Your orders</h2>
@@ -71,7 +72,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
               needed. Shop customers: use the number you give us in store.
             </p>
             <div className="mt-10">
-              <SignInForm next={safeNext(next)} />
+              <SignInForm next={safeNext(next)} initialPhone={initialPhone} />
             </div>
           </>
         )}

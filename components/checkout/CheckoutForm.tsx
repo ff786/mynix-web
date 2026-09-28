@@ -7,6 +7,7 @@ import { useCartLines } from "@/components/cart/CartView";
 import PhoneVerifier from "@/components/customer/PhoneVerifier";
 import OrderSummaryCard from "@/components/orders/OrderSummaryCard";
 import { placeOrder, type OrderSummary } from "@/lib/orders/actions";
+import type { CustomerProfile } from "@/lib/customer/profile";
 import type { Product } from "@/types/product";
 import { cn } from "@/utils/cn";
 import { formatLkr } from "@/utils/money";
@@ -35,8 +36,8 @@ function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: str
 type CheckoutFormProps = {
   products: Product[];
   deliveryFee: number;
-  /** Signed-in customer: their number is already verified. */
-  customer: { name: string; phone: string } | null;
+  /** Signed-in customer: number already verified; details pre-filled. */
+  customer: CustomerProfile | null;
 };
 
 export default function CheckoutForm({ products, deliveryFee, customer }: CheckoutFormProps) {
@@ -66,6 +67,14 @@ export default function CheckoutForm({ products, deliveryFee, customer }: Checko
           <Link href="/track" className="text-white/70 underline-offset-4 hover:text-white hover:underline">
             Track this order
           </Link>
+          {!customer && verifiedPhone && (
+            <Link
+              href={`/account?phone=${encodeURIComponent(verifiedPhone)}`}
+              className="text-white/70 underline-offset-4 hover:text-white hover:underline"
+            >
+              Create an account for faster checkout
+            </Link>
+          )}
           <Link href="/catalog" className="text-white/70 underline-offset-4 hover:text-white hover:underline">
             Continue shopping
           </Link>
@@ -163,7 +172,15 @@ export default function CheckoutForm({ products, deliveryFee, customer }: Checko
               )}
             </div>
             <Field label="Email (optional)" htmlFor="customerEmail">
-              <input id="customerEmail" name="customerEmail" type="email" maxLength={254} autoComplete="email" className={inputClass} />
+              <input
+                id="customerEmail"
+                name="customerEmail"
+                type="email"
+                maxLength={254}
+                autoComplete="email"
+                defaultValue={customer?.email ?? undefined}
+                className={inputClass}
+              />
             </Field>
           </div>
         </fieldset>
@@ -171,17 +188,46 @@ export default function CheckoutForm({ products, deliveryFee, customer }: Checko
         <fieldset className="space-y-5">
           <legend className="mb-5 text-xs uppercase tracking-[0.25em] text-white/45">Delivery address</legend>
           <Field label="Address" htmlFor="addressLine1">
-            <input id="addressLine1" name="addressLine1" required maxLength={200} autoComplete="address-line1" className={inputClass} />
+            <input
+              id="addressLine1"
+              name="addressLine1"
+              required
+              maxLength={200}
+              autoComplete="address-line1"
+              defaultValue={customer?.lastDeliveryAddress?.addressLine1}
+              className={inputClass}
+            />
           </Field>
           <Field label="Apartment, landmark (optional)" htmlFor="addressLine2">
-            <input id="addressLine2" name="addressLine2" maxLength={200} autoComplete="address-line2" className={inputClass} />
+            <input
+              id="addressLine2"
+              name="addressLine2"
+              maxLength={200}
+              autoComplete="address-line2"
+              defaultValue={customer?.lastDeliveryAddress?.addressLine2 ?? undefined}
+              className={inputClass}
+            />
           </Field>
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label="City" htmlFor="city">
-              <input id="city" name="city" required maxLength={100} autoComplete="address-level2" className={inputClass} />
+              <input
+                id="city"
+                name="city"
+                required
+                maxLength={100}
+                autoComplete="address-level2"
+                defaultValue={customer?.lastDeliveryAddress?.city}
+                className={inputClass}
+              />
             </Field>
             <Field label="District" htmlFor="district">
-              <select id="district" name="district" required defaultValue="" className={cn(inputClass, "appearance-none")}>
+              <select
+                id="district"
+                name="district"
+                required
+                defaultValue={customer?.lastDeliveryAddress?.district ?? ""}
+                className={cn(inputClass, "appearance-none")}
+              >
                 <option value="" disabled>
                   Choose…
                 </option>
@@ -193,7 +239,14 @@ export default function CheckoutForm({ products, deliveryFee, customer }: Checko
               </select>
             </Field>
             <Field label="Postal code (optional)" htmlFor="postalCode">
-              <input id="postalCode" name="postalCode" maxLength={20} autoComplete="postal-code" className={inputClass} />
+              <input
+                id="postalCode"
+                name="postalCode"
+                maxLength={20}
+                autoComplete="postal-code"
+                defaultValue={customer?.lastDeliveryAddress?.postalCode ?? undefined}
+                className={inputClass}
+              />
             </Field>
           </div>
           <Field label="Delivery notes (optional)" htmlFor="deliveryNotes">
