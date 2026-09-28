@@ -3,6 +3,7 @@ import { formatLkr } from "@/utils/money";
 
 const STATUS_TEXT: Record<OrderSummary["status"], string> = {
   PLACED: "Order placed — we'll call you to confirm delivery.",
+  PACKED: "Packed and getting ready for delivery.",
   DISPATCHED: "On its way to you.",
   DELIVERED: "Delivered.",
   CANCELLED: "This order was cancelled. Contact us on WhatsApp if that's unexpected.",

@@ -18,7 +18,7 @@ import { limited, visitorKey } from "@/lib/rate-limit";
 export type OrderLine = { name: string; quantity: number; unitPrice: number; lineTotal: number };
 export type OrderSummary = {
   invoiceNumber: string;
-  status: "PLACED" | "DISPATCHED" | "DELIVERED" | "CANCELLED";
+  status: "PLACED" | "PACKED" | "DISPATCHED" | "DELIVERED" | "CANCELLED";
   paymentMethod: "CASH_ON_DELIVERY" | "CARD";
   items: OrderLine[];
   subtotal: number;
