@@ -6,17 +6,14 @@ import { useCart } from "@/components/cart/CartProvider";
 import { useCartLines } from "@/components/cart/CartView";
 import PhoneVerifier from "@/components/customer/PhoneVerifier";
 import OrderSummaryCard from "@/components/orders/OrderSummaryCard";
+import { DISTRICTS } from "@/lib/districts";
 import { placeOrder, type OrderSummary } from "@/lib/orders/actions";
-import type { CustomerProfile } from "@/lib/customer/profile";
+import { saveAddress } from "@/lib/customer/actions";
+import type { CustomerProfile, SavedAddress } from "@/lib/customer/profile";
 import type { Product } from "@/types/product";
 import { cn } from "@/utils/cn";
 import { formatLkr } from "@/utils/money";
 
-const DISTRICTS = [
-  "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo", "Galle", "Gampaha", "Hambantota", "Jaffna",
-  "Kalutara", "Kandy", "Kegalle", "Kilinochchi", "Kurunegala", "Mannar", "Matale", "Matara", "Monaragala",
-  "Mullaitivu", "Nuwara Eliya", "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
-];
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-[15px] text-white placeholder:text-white/30 transition-colors focus:border-white/40 focus:outline-none";
@@ -38,9 +35,11 @@ type CheckoutFormProps = {
   deliveryFee: number;
   /** Signed-in customer: number already verified; details pre-filled. */
   customer: CustomerProfile | null;
+  /** Signed-in customer's saved addresses (default first). */
+  addresses: SavedAddress[];
 };
 
-export default function CheckoutForm({ products, deliveryFee, customer }: CheckoutFormProps) {
+export default function CheckoutForm({ products, deliveryFee, customer, addresses }: CheckoutFormProps) {
   const { ready, clear } = useCart();
   const { valid, subtotal, hasProblems } = useCartLines(products);
   const [pending, startTransition] = useTransition();
@@ -50,6 +49,10 @@ export default function CheckoutForm({ products, deliveryFee, customer }: Checko
   const requestId = useRef<string | null>(null);
   const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
   const phone = customer?.phone ?? verifiedPhone;
+  // Saved address in use ("new" = typing one); starts on the default.
+  const [addressChoice, setAddressChoice] = useState(addresses[0] ? String(addresses[0].id) : "new");
+  const chosen = addresses.find((a) => String(a.id) === addressChoice);
+  const prefill = chosen ?? (addresses.length === 0 ? customer?.lastDeliveryAddress : null);
 
   if (placed) {
     return (
@@ -122,6 +125,17 @@ export default function CheckoutForm({ products, deliveryFee, customer }: Checko
         website: value("website"),
       });
       if (result.ok) {
+        if (customer && form.get("saveAddress") === "on") {
+          // Best effort; the order is already placed.
+          await saveAddress({
+            label: addresses.length === 0 ? "Home" : `Address ${addresses.length + 1}`,
+            addressLine1: value("addressLine1"),
+            addressLine2: value("addressLine2"),
+            city: value("city"),
+            district: value("district") as Parameters<typeof saveAddress>[0]["district"],
+            postalCode: value("postalCode"),
+          }).catch(() => undefined);
+        }
         clear();
         setPlaced(result.order);
         window.scrollTo({ top: 0 });
@@ -187,67 +201,93 @@ export default function CheckoutForm({ products, deliveryFee, customer }: Checko
 
         <fieldset className="space-y-5">
           <legend className="mb-5 text-xs uppercase tracking-[0.25em] text-white/45">Delivery address</legend>
-          <Field label="Address" htmlFor="addressLine1">
-            <input
-              id="addressLine1"
-              name="addressLine1"
-              required
-              maxLength={200}
-              autoComplete="address-line1"
-              defaultValue={customer?.lastDeliveryAddress?.addressLine1}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Apartment, landmark (optional)" htmlFor="addressLine2">
-            <input
-              id="addressLine2"
-              name="addressLine2"
-              maxLength={200}
-              autoComplete="address-line2"
-              defaultValue={customer?.lastDeliveryAddress?.addressLine2 ?? undefined}
-              className={inputClass}
-            />
-          </Field>
-          <div className="grid gap-5 sm:grid-cols-3">
-            <Field label="City" htmlFor="city">
-              <input
-                id="city"
-                name="city"
-                required
-                maxLength={100}
-                autoComplete="address-level2"
-                defaultValue={customer?.lastDeliveryAddress?.city}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="District" htmlFor="district">
+          {customer && addresses.length > 0 && (
+            <Field label="Deliver to" htmlFor="savedAddress">
               <select
-                id="district"
-                name="district"
-                required
-                defaultValue={customer?.lastDeliveryAddress?.district ?? ""}
+                id="savedAddress"
+                value={addressChoice}
+                onChange={(e) => setAddressChoice(e.target.value)}
                 className={cn(inputClass, "appearance-none")}
               >
-                <option value="" disabled>
-                  Choose…
-                </option>
-                {DISTRICTS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
+                {addresses.map((a) => (
+                  <option key={a.id} value={String(a.id)}>
+                    {a.label} — {a.addressLine1}, {a.city}
                   </option>
                 ))}
+                <option value="new">A new address…</option>
               </select>
             </Field>
-            <Field label="Postal code (optional)" htmlFor="postalCode">
+          )}
+          {/* Re-mounted when the chosen address changes, so the fields pick up its values. */}
+          <div key={addressChoice} className="space-y-5">
+            <Field label="Address" htmlFor="addressLine1">
               <input
-                id="postalCode"
-                name="postalCode"
-                maxLength={20}
-                autoComplete="postal-code"
-                defaultValue={customer?.lastDeliveryAddress?.postalCode ?? undefined}
+                id="addressLine1"
+                name="addressLine1"
+                required
+                maxLength={200}
+                autoComplete="address-line1"
+                defaultValue={prefill?.addressLine1}
                 className={inputClass}
               />
             </Field>
+            <Field label="Apartment, landmark (optional)" htmlFor="addressLine2">
+              <input
+                id="addressLine2"
+                name="addressLine2"
+                maxLength={200}
+                autoComplete="address-line2"
+                defaultValue={prefill?.addressLine2 ?? undefined}
+                className={inputClass}
+              />
+            </Field>
+            <div className="grid gap-5 sm:grid-cols-3">
+              <Field label="City" htmlFor="city">
+                <input
+                  id="city"
+                  name="city"
+                  required
+                  maxLength={100}
+                  autoComplete="address-level2"
+                  defaultValue={prefill?.city}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="District" htmlFor="district">
+                <select
+                  id="district"
+                  name="district"
+                  required
+                  defaultValue={prefill?.district ?? ""}
+                  className={cn(inputClass, "appearance-none")}
+                >
+                  <option value="" disabled>
+                    Choose…
+                  </option>
+                  {DISTRICTS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Postal code (optional)" htmlFor="postalCode">
+                <input
+                  id="postalCode"
+                  name="postalCode"
+                  maxLength={20}
+                  autoComplete="postal-code"
+                  defaultValue={prefill?.postalCode ?? undefined}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+            {customer && addressChoice === "new" && addresses.length < 10 && (
+              <label className="flex items-center gap-2 text-sm text-white/70">
+                <input type="checkbox" name="saveAddress" defaultChecked className="accent-white" />
+                Save this address to my account
+              </label>
+            )}
           </div>
           <Field label="Delivery notes (optional)" htmlFor="deliveryNotes">
             <textarea id="deliveryNotes" name="deliveryNotes" rows={3} maxLength={500} className={inputClass} />

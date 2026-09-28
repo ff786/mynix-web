@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   clearCustomerSession,
@@ -11,6 +12,7 @@ import {
   setVerification,
   type VerifyPurpose,
 } from "@/lib/customer/session";
+import { DISTRICTS } from "@/lib/districts";
 import { mobileSchema } from "@/lib/phone";
 import { PosError, posRequest } from "@/lib/pos/client";
 import { limited, visitorKey } from "@/lib/rate-limit";
@@ -114,21 +116,103 @@ export async function completeSignIn(input: { name?: string; email?: string }): 
   }
 }
 
-/** Signed-in customers can change their email. */
-export async function updateEmail(input: { email: string }): Promise<Result<{ email: string }>> {
-  const session = await getCustomerSession();
-  if (!session) return { ok: false, error: "Please sign in again." };
-  const email = emailSchema.safeParse((input.email ?? "").trim());
-  if (!email.success) return { ok: false, error: email.error.issues[0].message };
+// --- profile manager (signed-in customers only) --------------------------------
 
+async function requireSession() {
+  const session = await getCustomerSession();
+  if (!session) throw new PosError(401, "Please sign in again.");
+  return session;
+}
+
+const failure = (error: unknown, fallback: string) =>
+  ({
+    ok: false,
+    error: error instanceof PosError && [400, 401, 404].includes(error.status) ? error.message : fallback,
+  }) as const;
+
+const profileSchema = z.object({
+  name: z.string().trim().min(1, "Enter your name.").max(150),
+  email: emailSchema,
+});
+
+export async function updateProfile(input: { name: string; email: string }): Promise<Result> {
+  const parsed = profileSchema.safeParse({ name: input.name, email: (input.email ?? "").trim() });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   try {
-    const customer = await posRequest<{ email: string }>(`/store/customers/${session.customerId}`, {
+    const session = await requireSession();
+    const customer = await posRequest<Customer>(`/store/customers/${session.customerId}`, {
       method: "PATCH",
-      body: { email: email.data },
+      body: parsed.data,
     });
-    return { ok: true, email: customer.email };
-  } catch {
-    return { ok: false, error: "We couldn't save your email. Please try again." };
+    await setCustomerSession({ ...session, name: customer.name });
+    revalidatePath("/account");
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "We couldn't save your details. Please try again.");
+  }
+}
+
+const addressSchema = z.object({
+  label: z.string().trim().min(1, "Give the address a name, e.g. Home.").max(40),
+  addressLine1: z.string().trim().min(1, "Enter the address.").max(200),
+  addressLine2: z.string().trim().max(200).optional(),
+  city: z.string().trim().min(1, "Enter the city.").max(100),
+  district: z.enum(DISTRICTS, "Choose a district."),
+  postalCode: z.string().trim().max(20).optional(),
+  makeDefault: z.boolean().optional(),
+});
+export type AddressInput = z.input<typeof addressSchema>;
+
+export async function saveAddress(input: AddressInput, addressId?: number): Promise<Result> {
+  const parsed = addressSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  try {
+    const session = await requireSession();
+    const base = `/store/customers/${session.customerId}/addresses` as const;
+    await posRequest(addressId ? `${base}/${Number(addressId)}` : base, {
+      method: addressId ? "PUT" : "POST",
+      body: { ...parsed.data, makeDefault: !!parsed.data.makeDefault },
+    });
+    revalidatePath("/account");
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "We couldn't save the address. Please try again.");
+  }
+}
+
+export async function deleteAddress(addressId: number): Promise<Result> {
+  try {
+    const session = await requireSession();
+    await posRequest(`/store/customers/${session.customerId}/addresses/${Number(addressId)}`, { method: "DELETE" });
+    revalidatePath("/account");
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "We couldn't remove the address.");
+  }
+}
+
+export async function makeDefaultAddress(addressId: number): Promise<Result> {
+  try {
+    const session = await requireSession();
+    await posRequest(`/store/customers/${session.customerId}/addresses/${Number(addressId)}/default`, {
+      method: "POST",
+    });
+    revalidatePath("/account");
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "We couldn't update the default address.");
+  }
+}
+
+/** Closes the website account (sign-in and saved addresses); the shop record stays. */
+export async function closeAccount(): Promise<Result> {
+  try {
+    const session = await requireSession();
+    await posRequest(`/store/customers/${session.customerId}/account`, { method: "DELETE" });
+    await clearCustomerSession();
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "We couldn't close your account. Please contact us.");
   }
 }
 

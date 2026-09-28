@@ -18,6 +18,15 @@ export type CustomerProfile = {
   lastDeliveryAddress: DeliveryAddress | null;
 };
 
+export type SavedAddress = DeliveryAddress & { id: number; label: string; defaultAddress: boolean };
+
+/** The signed-in customer's saved addresses (default first). */
+export async function getSavedAddresses(): Promise<SavedAddress[]> {
+  const session = await getCustomerSession();
+  if (!session) return [];
+  return posRequest<SavedAddress[]>(`/store/customers/${session.customerId}/addresses`).catch(() => []);
+}
+
 /** The signed-in customer's details from the POS, or null (signed out, removed, or POS unreachable). */
 export async function getCustomerProfile(): Promise<CustomerProfile | null> {
   const session = await getCustomerSession();
