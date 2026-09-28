@@ -40,7 +40,7 @@ export default function OrderSummaryCard({ order }: { order: OrderSummary }) {
               <dd className="tabular-nums">{order.deliveryFee > 0 ? formatLkr(order.deliveryFee) : "Free"}</dd>
             </div>
             <div className="flex justify-between pt-2 text-base font-semibold text-white/90">
-              <dt>{order.paymentMethod === "CASH_ON_DELIVERY" ? "Pay on delivery" : "Paid by card"}</dt>
+              <dt>{order.paymentMethod === "CARD" ? "Paid by card" : "Pay on delivery"}</dt>
               <dd className="tabular-nums">{formatLkr(order.grandTotal)}</dd>
             </div>
           </dl>

@@ -37,13 +37,9 @@ type CheckoutFormProps = {
   deliveryFee: number;
   /** Signed-in customer: their number is already verified. */
   customer: { name: string; phone: string } | null;
-  /** Shown for bank transfer; the option is hidden when not configured. */
-  bankDetails: string | null;
 };
 
-type PaymentChoice = "CASH_ON_DELIVERY" | "BANK_TRANSFER";
-
-export default function CheckoutForm({ products, deliveryFee, customer, bankDetails }: CheckoutFormProps) {
+export default function CheckoutForm({ products, deliveryFee, customer }: CheckoutFormProps) {
   const { ready, clear } = useCart();
   const { valid, subtotal, hasProblems } = useCartLines(products);
   const [pending, startTransition] = useTransition();
@@ -52,7 +48,6 @@ export default function CheckoutForm({ products, deliveryFee, customer, bankDeta
   // One id per checkout: a retry after a network error can't create a second order.
   const requestId = useRef<string | null>(null);
   const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
-  const [payment, setPayment] = useState<PaymentChoice>("CASH_ON_DELIVERY");
   const phone = customer?.phone ?? verifiedPhone;
 
   if (placed) {
@@ -64,16 +59,6 @@ export default function CheckoutForm({ products, deliveryFee, customer, bankDeta
           We&apos;ll call you to confirm delivery. You&apos;ll also get an SMS with your invoice. Keep your order
           number to track it.
         </p>
-        {placed.paymentMethod === "BANK_TRANSFER" && bankDetails && (
-          <div className="mt-8 rounded-3xl border border-amber-300/30 bg-amber-300/5 p-6">
-            <p className="text-sm font-medium text-white/90">Please transfer the total to:</p>
-            <p className="mt-3 whitespace-pre-line font-mono text-sm leading-relaxed text-white/80">{bankDetails}</p>
-            <p className="mt-3 text-sm text-white/60">
-              Use your order number <span className="font-mono text-white/85">{placed.invoiceNumber}</span> as the
-              reference. We&apos;ll dispatch once the payment is received.
-            </p>
-          </div>
-        )}
         <div className="mt-8">
           <OrderSummaryCard order={placed} />
         </div>
@@ -115,7 +100,7 @@ export default function CheckoutForm({ products, deliveryFee, customer, bankDeta
       const result = await placeOrder({
         requestId: requestId.current!,
         items: valid.map(({ line }) => ({ id: line.id, quantity: line.quantity })),
-        paymentMethod: payment,
+        paymentMethod: "CASH_ON_DELIVERY",
         customerName: value("customerName"),
         customerPhone: phone ?? "",
         customerEmail: value("customerEmail"),
@@ -219,39 +204,17 @@ export default function CheckoutForm({ products, deliveryFee, customer, bankDeta
         <fieldset>
           <legend className="mb-5 text-xs uppercase tracking-[0.25em] text-white/45">Payment</legend>
           <div className="space-y-3">
-            {(
-              [
-                ["CASH_ON_DELIVERY", "Cash on delivery", "Pay the courier when your order arrives."],
-                ...(bankDetails
-                  ? [["BANK_TRANSFER", "Bank transfer", "We'll show our bank details after you order; we dispatch once paid."]]
-                  : []),
-              ] as [PaymentChoice, string, string][]
-            ).map(([value, title, text]) => (
-              <label
-                key={value}
-                className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors",
-                  payment === value ? "border-white/40 bg-white/[0.04]" : "border-white/10 hover:border-white/25",
-                )}
-              >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value={value}
-                  checked={payment === value}
-                  onChange={() => setPayment(value)}
-                  className="accent-white"
-                />
-                <span>
-                  <span className="block text-sm font-medium text-white/90">{title}</span>
-                  <span className="block text-xs text-white/50">{text}</span>
-                </span>
-              </label>
-            ))}
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/40 bg-white/[0.04] p-4">
+              <input type="radio" name="paymentMethod" value="CASH_ON_DELIVERY" defaultChecked className="accent-white" />
+              <span>
+                <span className="block text-sm font-medium text-white/90">Cash on delivery</span>
+                <span className="block text-xs text-white/50">Pay the courier when your order arrives.</span>
+              </span>
+            </label>
             <label className="flex items-center gap-3 rounded-xl border border-white/10 p-4 opacity-50">
               <input type="radio" name="paymentMethod" value="CARD" disabled />
               <span>
-                <span className="block text-sm font-medium text-white/90">Card payment</span>
+                <span className="block text-sm font-medium text-white/90">Card payment (OnePay)</span>
                 <span className="block text-xs text-white/50">Coming soon.</span>
               </span>
             </label>

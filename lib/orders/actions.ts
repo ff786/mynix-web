@@ -4,7 +4,7 @@ import { updateTag } from "next/cache";
 import { z } from "zod";
 import { CATALOG_TAG, getCatalogEntries } from "@/lib/catalog";
 import { clearVerification, getCustomerSession, getVerification } from "@/lib/customer/session";
-import { bankTransferDetails, deliveryFee } from "@/lib/orders/config";
+import { deliveryFee } from "@/lib/orders/config";
 import { mobileSchema } from "@/lib/phone";
 import { PosError, posRequest } from "@/lib/pos/client";
 import { limited, visitorKey } from "@/lib/rate-limit";
@@ -19,7 +19,7 @@ export type OrderLine = { name: string; quantity: number; unitPrice: number; lin
 export type OrderSummary = {
   invoiceNumber: string;
   status: "PLACED" | "DISPATCHED" | "DELIVERED" | "CANCELLED";
-  paymentMethod: "CASH_ON_DELIVERY" | "BANK_TRANSFER" | "CARD";
+  paymentMethod: "CASH_ON_DELIVERY" | "CARD";
   items: OrderLine[];
   subtotal: number;
   deliveryFee: number;
@@ -46,7 +46,7 @@ const checkoutSchema = z.object({
     .array(z.object({ id: z.string().min(1).max(100), quantity: z.number().int().min(1).max(50) }))
     .min(1, "Your cart is empty.")
     .max(30),
-  paymentMethod: z.enum(["CASH_ON_DELIVERY", "BANK_TRANSFER", "CARD"]),
+  paymentMethod: z.enum(["CASH_ON_DELIVERY", "CARD"]),
   customerName: text(150),
   customerPhone: mobileSchema,
   customerEmail: z.union([z.email().max(254), z.literal("")]).optional(),
@@ -70,11 +70,7 @@ export async function placeOrder(input: CheckoutInput): Promise<ActionResult> {
   const order = parsed.data;
 
   if (order.paymentMethod === "CARD") {
-    return { ok: false, error: "Card payment is coming soon. Please choose another payment method." };
-  }
-
-  if (order.paymentMethod === "BANK_TRANSFER" && !bankTransferDetails()) {
-    return { ok: false, error: "Bank transfer isn't available right now. Please choose cash on delivery." };
+    return { ok: false, error: "Card payment is coming soon. Please choose cash on delivery." };
   }
 
   // Who is ordering: a signed-in customer (their number is fixed), or a guest

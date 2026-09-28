@@ -3,7 +3,7 @@ import StoreUnavailable from "@/components/catalog/StoreUnavailable";
 import CheckoutForm from "@/components/checkout/CheckoutForm";
 import { getStorefront } from "@/lib/catalog";
 import { getCustomerSession } from "@/lib/customer/session";
-import { bankTransferDetails, deliveryFee } from "@/lib/orders/config";
+import { deliveryFee } from "@/lib/orders/config";
 
 export const metadata: Metadata = { title: "Checkout", robots: { index: false } };
 
@@ -18,7 +18,6 @@ export default async function CheckoutPage() {
             products={products}
             deliveryFee={deliveryFee()}
             customer={session && { name: session.name, phone: session.phone }}
-            bankDetails={bankTransferDetails()}
           /> : <StoreUnavailable />}
       </div>
     </main>
