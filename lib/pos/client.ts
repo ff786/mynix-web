@@ -8,6 +8,12 @@ import "server-only";
 const API_URL = process.env.POS_API_URL ?? "";
 const USERNAME = process.env.POS_STORE_USERNAME ?? "";
 const PASSWORD = process.env.POS_STORE_PASSWORD ?? "";
+/**
+ * Key for the website's direct address to the POS (store-api.mynix.lk, which
+ * skips Cloudflare): the server answers only requests that carry it.
+ */
+const STORE_KEY = process.env.POS_STORE_KEY ?? "";
+const keyHeader: Record<string, string> = STORE_KEY ? { "X-Mynix-Store-Key": STORE_KEY } : {};
 
 export const isPosConfigured = Boolean(API_URL && USERNAME && PASSWORD);
 
@@ -33,7 +39,7 @@ async function getToken(): Promise<string> {
 
   const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...keyHeader },
     body: JSON.stringify({ username: USERNAME, password: PASSWORD }),
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
@@ -54,6 +60,7 @@ export async function posRequest<T>(path: `/store/${string}`, init: { method?: s
     const res = await fetch(`${API_URL}${path}`, {
       method: init.method ?? "GET",
       headers: {
+        ...keyHeader,
         Authorization: `Bearer ${await getToken()}`,
         ...(init.body !== undefined && { "Content-Type": "application/json" }),
       },
