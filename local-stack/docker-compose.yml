@@ -38,6 +38,8 @@ services:
       MYNIX_PUBLIC_INVOICE_BASE_URL: http://localhost:5173/invoice
       # Links in website-order SMS (invoice, tracking) point here.
       MYNIX_WEBSITE_URL: http://localhost:3000
+      # Emergency admin reset test: MYNIX_RESET_ADMIN_PASSWORD=<new value> docker compose up -d pos-backend
+      MYNIX_RESET_ADMIN_PASSWORD: ${MYNIX_RESET_ADMIN_PASSWORD:-}
       # Uploaded photos/videos go to the local S3 stand-in below (R2 in production).
       MEDIA_STORAGE_ENDPOINT: http://media:9090
       MEDIA_STORAGE_BUCKET: mynix-media
