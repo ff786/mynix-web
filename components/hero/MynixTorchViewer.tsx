@@ -71,47 +71,82 @@ function sampleBackdrop(img: HTMLImageElement, ctx: CanvasRenderingContext2D): R
   return [sum[0] / 4, sum[1] / 4, sum[2] / 4];
 }
 
-function useFramePreloader(count: number) {
+/**
+ * Frame 0 first, then every 8th frame (so scrubbing looks right early), then the
+ * rest. Only frame 0 gates the hero; the others stream in a few at a time so
+ * decoding never floods the main thread.
+ */
+function loadOrder(count: number): number[] {
+  const order = [0];
+  for (let i = 8; i < count; i += 8) order.push(i);
+  if (!order.includes(count - 1)) order.push(count - 1);
+  for (let i = 1; i < count; i++) if (!order.includes(i)) order.push(i);
+  return order;
+}
+
+const CONCURRENCY = 4;
+
+function useFramePreloader(count: number, onFrame: () => void) {
   const imagesRef = useRef<HTMLImageElement[]>([]);
-  const backdropsRef = useRef<RGB[]>([]);
+  const backdropsRef = useRef<(RGB | null)[]>([]);
+  const onFrameRef = useRef(onFrame);
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    onFrameRef.current = onFrame;
+  }, [onFrame]);
+
+  useEffect(() => {
     let cancelled = false;
-    let settled = 0;
 
     const sampler = document.createElement("canvas");
     sampler.width = 32;
     sampler.height = 18;
     const samplerCtx = sampler.getContext("2d", { willReadFrequently: true });
-    const backdrops: RGB[] = Array.from({ length: count }, () => WHITE);
+    const backdrops: (RGB | null)[] = Array.from({ length: count }, () => null);
+    backdropsRef.current = backdrops;
 
-    const images = Array.from({ length: count }, (_, i) => {
+    const images = Array.from({ length: count }, () => {
       const img = new Image();
       img.decoding = "async";
-      const done = () => {
-        if (cancelled) return;
-        if (samplerCtx && img.naturalWidth > 0) backdrops[i] = sampleBackdrop(img, samplerCtx);
-        settled += 1;
-        setProgress(settled / count);
-        if (settled === count) {
-          backdropsRef.current = backdrops;
-          setReady(true);
-        }
-      };
-      // Decode up front so the first draw of each frame never janks.
-      img.onload = () => {
-        img.decode().catch(() => undefined).finally(done);
-      };
-      img.onerror = done;
-      img.src = frameSrc(i);
       return img;
     });
     imagesRef.current = images;
 
+    const queue = loadOrder(count);
+    const load = (i: number) =>
+      new Promise<void>((resolve) => {
+        const img = images[i];
+        const done = () => {
+          if (cancelled) return resolve();
+          if (samplerCtx && img.naturalWidth > 0) backdrops[i] = sampleBackdrop(img, samplerCtx);
+          if (i === 0) {
+            setProgress(1);
+            setReady(true);
+          }
+          onFrameRef.current();
+          resolve();
+        };
+        // Decode up front so the first draw of each frame never janks.
+        img.onload = () => {
+          img.decode().catch(() => undefined).finally(done);
+        };
+        img.onerror = done;
+        img.src = frameSrc(i);
+      });
+
+    const worker = async () => {
+      while (!cancelled && queue.length > 0) await load(queue.shift()!);
+    };
+    // Frame 0 alone, then the rest in parallel lanes.
+    load(queue.shift()!).then(() => {
+      for (let lane = 0; lane < CONCURRENCY; lane++) void worker();
+    });
+
     return () => {
       cancelled = true;
+      queue.length = 0;
       for (const img of images) {
         img.onload = null;
         img.onerror = null;
@@ -124,6 +159,15 @@ function useFramePreloader(count: number) {
   }, [count]);
 
   return { imagesRef, backdropsRef, progress, ready };
+}
+
+/** Backdrop of the nearest loaded frame (white until any have loaded). */
+function nearestBackdrop(backdrops: (RGB | null)[], index: number): RGB {
+  for (let offset = 0; offset < backdrops.length; offset++) {
+    const found = backdrops[index - offset] ?? backdrops[index + offset];
+    if (found) return found;
+  }
+  return WHITE;
 }
 
 const isDrawable = (img: HTMLImageElement | undefined): img is HTMLImageElement =>
@@ -141,7 +185,10 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
   const rafRef = useRef<number | null>(null);
   const currentFrameRef = useRef(0);
 
-  const { imagesRef, backdropsRef, progress, ready } = useFramePreloader(FRAME_COUNT);
+  // Redraw as frames stream in, so a placeholder frame is swapped for the real one.
+  const redrawRef = useRef<() => void>(() => undefined);
+  const onFrame = useCallback(() => redrawRef.current(), []);
+  const { imagesRef, backdropsRef, progress, ready } = useFramePreloader(FRAME_COUNT, onFrame);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -188,6 +235,10 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
     });
   }, [draw]);
 
+  useEffect(() => {
+    redrawRef.current = scheduleDraw;
+  }, [scheduleDraw]);
+
   /** Sync frame, background and ink to a (smoothed) scroll progress. */
   const apply = useCallback(
     (p: number) => {
@@ -203,7 +254,7 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
       if (backdrops.length === FRAME_COUNT) {
         const lo = Math.floor(f);
         const hi = Math.min(FRAME_COUNT - 1, lo + 1);
-        bg = mix(backdrops[lo], backdrops[hi], f - lo);
+        bg = mix(nearestBackdrop(backdrops, lo), nearestBackdrop(backdrops, hi), f - lo);
       }
       bg = mix(bg, VOID, transform(p, VOID_BLEND, [0, 1]));
 
@@ -269,14 +320,14 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
     };
   }, [draw]);
 
-  // First paint once everything is loaded (also covers restored scroll positions).
+  // First paint once frame 0 is in (also covers restored scroll positions).
   useEffect(() => {
     if (!ready) return;
     currentFrameRef.current = -1;
     apply(smooth.get());
   }, [ready, apply, smooth]);
 
-  // Lock scrolling while loading.
+  // Lock scrolling until the first frame is in.
   useEffect(() => {
     if (ready) return;
     const root = document.documentElement;

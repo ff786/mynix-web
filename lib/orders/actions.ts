@@ -19,7 +19,7 @@ export type OrderLine = { name: string; quantity: number; unitPrice: number; lin
 export type OrderSummary = {
   invoiceNumber: string;
   status: "PLACED" | "PACKED" | "DISPATCHED" | "DELIVERED" | "CANCELLED";
-  paymentMethod: "CASH_ON_DELIVERY" | "CARD";
+  paymentMethod: "CASH_ON_DELIVERY" | "CARD" | "BANK_TRANSFER";
   items: OrderLine[];
   subtotal: number;
   deliveryFee: number;

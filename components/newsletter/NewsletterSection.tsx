@@ -21,7 +21,7 @@ export default function NewsletterSection() {
           className="text-4xl font-semibold uppercase leading-[0.92] tracking-tighter text-ink/90 sm:text-6xl"
         />
         <Reveal as="p" delay={0.25} className="mt-6 max-w-md leading-relaxed text-ink/60">
-          New arrivals, restocks and tools worth knowing about — occasional emails from MYNIX, never spam.
+          New arrivals, restocks and tools worth knowing about occasional emails from MYNIX, never spam.
         </Reveal>
         <Reveal delay={0.4} className="mt-10 w-full max-w-lg">
           <NewsletterForm />

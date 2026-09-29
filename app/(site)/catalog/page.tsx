@@ -6,11 +6,26 @@ import Reveal from "@/components/ui/text/Reveal";
 import RevealText from "@/components/ui/text/RevealText";
 import { getStorefront } from "@/lib/catalog";
 
-export const metadata: Metadata = {
-  title: "Catalog",
-  description:
-    "Shop the MYNIX catalog of gem torches, optical instruments, loupes, scales, lapidary supplies and appraisal accessories.",
-};
+const CATALOG_DESCRIPTION =
+  "Shop MYNIX gem torches, loupes, polariscopes, refractometers, precision scales, lapidary supplies and appraisal accessories. Cash on delivery across Sri Lanka.";
+
+/** Each category view (/catalog?category=scales) is its own page for search engines. */
+export async function generateMetadata({ searchParams }: PageProps<"/catalog">): Promise<Metadata> {
+  const { category } = await searchParams;
+  const { categories } = await getStorefront();
+  const selected = typeof category === "string" ? categories.find((c) => c.id === category) : undefined;
+
+  if (!selected) {
+    return { title: "Shop the Catalog", description: CATALOG_DESCRIPTION, alternates: { canonical: "/catalog" } };
+  }
+
+  const highlights = selected.highlights.length ? ` ${selected.highlights.join(", ")}.` : "";
+  return {
+    title: `${selected.name} — Shop by Category`,
+    description: `Shop ${selected.count} MYNIX ${selected.name.toLowerCase()} products online.${highlights} Cash on delivery across Sri Lanka.`,
+    alternates: { canonical: `/catalog?category=${selected.id}` },
+  };
+}
 
 export default async function CatalogPage({ searchParams }: PageProps<"/catalog">) {
   const { category, product } = await searchParams;
@@ -35,7 +50,8 @@ export default async function CatalogPage({ searchParams }: PageProps<"/catalog"
             : "Professional gemology tools and equipment."}
         </Reveal>
 
-        <div className="mt-16">
+        {/* Category links land here (#shop), straight on the filtered results. */}
+        <div id="shop" className="mt-16 scroll-mt-28">
           {available ? (
             // Re-mount when the query changes (e.g. footer links) to reset the filter.
             <ProductGrid
@@ -44,6 +60,7 @@ export default async function CatalogPage({ searchParams }: PageProps<"/catalog"
               categories={categories}
               initialCategory={initialCategory}
               initialProductId={initialProductId}
+              syncUrl
             />
           ) : (
             <StoreUnavailable />

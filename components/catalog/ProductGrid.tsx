@@ -19,6 +19,8 @@ type ProductGridProps = {
   initialProductId?: string;
   /** Show at most this many results, with a link through to the full catalog. */
   limit?: number;
+  /** Keep ?category= in the address bar in step with the tabs (catalog page). */
+  syncUrl?: boolean;
 };
 
 const normalise = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -28,8 +30,28 @@ const searchText = (p: Product) =>
     [p.name, p.categoryName, p.description, ...p.features].join(" "),
   );
 
-export default function ProductGrid({ products, categories, initialCategory = "all", initialProductId, limit }: ProductGridProps) {
-  const [category, setCategory] = useState<CategoryFilterValue>(initialCategory);
+export default function ProductGrid({
+  products,
+  categories,
+  initialCategory = "all",
+  initialProductId,
+  limit,
+  syncUrl,
+}: ProductGridProps) {
+  const [category, setCategoryState] = useState<CategoryFilterValue>(initialCategory);
+  const setCategory = useCallback(
+    (value: CategoryFilterValue) => {
+      setCategoryState(value);
+      if (!syncUrl) return;
+      // A shareable address for the filtered view, without reloading the page.
+      const url = new URL(window.location.href);
+      if (value === "all") url.searchParams.delete("category");
+      else url.searchParams.set("category", value);
+      url.searchParams.delete("product");
+      window.history.replaceState(window.history.state, "", url);
+    },
+    [syncUrl],
+  );
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Product | null>(
     () => products.find((p) => p.id === initialProductId) ?? null,
@@ -85,7 +107,7 @@ export default function ProductGrid({ products, categories, initialCategory = "a
         </label>
       </div>
 
-      <p aria-live="polite" className="mt-8 text-xs uppercase tracking-[0.2em] text-white/40">
+      <p aria-live="polite" className="mt-8 text-xs uppercase tracking-[0.2em] text-white/55">
         {filtered.length === 0
           ? "No matching products"
           : `Showing ${visible.length} of ${filtered.length} product${filtered.length === 1 ? "" : "s"}`}

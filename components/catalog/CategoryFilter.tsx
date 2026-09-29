@@ -48,7 +48,7 @@ export default function CategoryFilter({ categories, value, onChange, counts, la
             {!active && <span className="absolute inset-0 rounded-full border border-white/10" />}
             <span className="relative">
               {option.label}
-              <span className={cn("ml-2 tabular-nums", active ? "text-black/50" : "text-white/30")}>
+              <span className={cn("ml-2 tabular-nums", active ? "text-black/60" : "text-white/55")}>
                 {counts[option.id] ?? 0}
               </span>
             </span>

@@ -6,7 +6,14 @@ import Eyebrow from "@/components/ui/text/Eyebrow";
 import Reveal from "@/components/ui/text/Reveal";
 import { EASE_OUT } from "@/components/ui/text/RevealText";
 import ScrollFillText from "@/components/ui/text/ScrollFillText";
-import { PRODUCT_RANGES } from "@/data/ranges";
+import FacebookIcon from "@/components/ui/FacebookIcon";
+import InstagramIcon from "@/components/ui/InstagramIcon";
+import { FACEBOOK_URL, INSTAGRAM_URL } from "@/utils/whatsapp";
+
+const SOCIALS = [
+  { label: "Instagram", href: INSTAGRAM_URL, Icon: InstagramIcon },
+  { label: "Facebook", href: FACEBOOK_URL, Icon: FacebookIcon },
+];
 
 const PILLARS = [
   {
@@ -23,9 +30,9 @@ const PILLARS = [
   },
 ];
 
-const statsFor = (productCount: number) => [
+const statsFor = (productCount: number, categoryCount: number) => [
   { value: productCount, suffix: "+", label: "Instruments & tools" },
-  { value: PRODUCT_RANGES.length, suffix: "+", label: "Product ranges" },
+  { value: categoryCount, suffix: "", label: "Product categories" },
 ];
 
 const STORY =
@@ -37,8 +44,8 @@ const STORY =
  * content column (8). Pillars and stats hang off the same content edge, and
  * every row is separated by a hairline that draws in on scroll.
  */
-export default function BrandStory({ productCount }: { productCount: number }) {
-  const stats = statsFor(productCount);
+export default function BrandStory({ productCount, categoryCount }: { productCount: number; categoryCount: number }) {
+  const stats = statsFor(productCount, categoryCount);
   return (
     <section
       id="about"
@@ -55,6 +62,23 @@ export default function BrandStory({ productCount }: { productCount: number }) {
               <Eyebrow className="text-base font-semibold sm:text-lg">About MYNIX</Eyebrow>
               <Reveal as="p" delay={0.2} className="mt-5 max-w-[18rem] text-[15px] leading-relaxed text-ink/55">
                 Gemology tools &amp; equipment for gemologists, traders and appraisers.
+              </Reveal>
+              <Reveal delay={0.3} className="mt-8 flex items-center gap-4">
+                <span className="text-xs font-medium uppercase tracking-[0.25em] text-ink/50">Follow us</span>
+                <span className="flex gap-2">
+                  {SOCIALS.map(({ label, href, Icon }) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`MYNIX on ${label}`}
+                      className="rounded-full border border-ink/15 p-2.5 text-ink/70 transition-colors hover:border-accent hover:text-accent"
+                    >
+                      <Icon className="h-4 w-4" />
+                    </a>
+                  ))}
+                </span>
               </Reveal>
             </div>
           </aside>

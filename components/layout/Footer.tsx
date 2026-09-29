@@ -1,12 +1,24 @@
 import Link from "next/link";
-import { ArrowUpRight, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
+import CookieSettingsButton from "@/components/consent/CookieSettingsButton";
 import { buttonClasses } from "@/components/ui/Button";
 import NewsletterForm from "@/components/newsletter/NewsletterForm";
+import FacebookIcon from "@/components/ui/FacebookIcon";
+import InstagramIcon from "@/components/ui/InstagramIcon";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 import Eyebrow from "@/components/ui/text/Eyebrow";
 import Reveal from "@/components/ui/text/Reveal";
 import RevealText from "@/components/ui/text/RevealText";
-import { WHATSAPP_DISPLAY, WHATSAPP_NUMBER, getWhatsAppGeneralUrl } from "@/utils/whatsapp";
+import {
+  CONTACT_EMAIL,
+  FACEBOOK_URL,
+  INSTAGRAM_URL,
+  SHOP_ADDRESS,
+  SHOP_MAP_URL,
+  WHATSAPP_DISPLAY,
+  WHATSAPP_NUMBER,
+  getWhatsAppGeneralUrl,
+} from "@/utils/whatsapp";
 
 const QUICK_LINKS = [
   { label: "Torch Showcase", href: "/#experience" },
@@ -59,9 +71,9 @@ export default function Footer() {
 
         <div className="grid grid-cols-2 gap-10 py-20 md:grid-cols-4">
           <div className="col-span-2 md:col-span-1">
-            <span className="text-sm font-semibold uppercase tracking-[0.4em] text-ink/90">
+            <Link href="/" aria-label="MYNIX home" className="text-sm font-semibold uppercase tracking-[0.4em] text-ink/90 hover:text-ink">
               Mynix
-            </span>
+            </Link>
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-ink/60">
               Gemology tools &amp; equipment for gemologists, traders and appraisers.
             </p>
@@ -104,6 +116,30 @@ export default function Footer() {
             </li>
             <li>
               <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2.5 text-sm text-ink/60 transition-colors hover:text-ink"
+              >
+                <InstagramIcon className="h-4 w-4" />
+                Instagram
+                <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+              </a>
+            </li>
+            <li>
+              <a
+                href={FACEBOOK_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2.5 text-sm text-ink/60 transition-colors hover:text-ink"
+              >
+                <FacebookIcon className="h-4 w-4" />
+                Facebook
+                <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+              </a>
+            </li>
+            <li>
+              <a
                 href={`tel:+${WHATSAPP_NUMBER}`}
                 className="inline-flex items-center gap-2.5 text-sm text-ink/60 transition-colors hover:text-ink"
               >
@@ -111,16 +147,43 @@ export default function Footer() {
                 {WHATSAPP_DISPLAY}
               </a>
             </li>
-            <li className="inline-flex items-center gap-2.5 text-sm text-ink/60">
-              <MapPin className="h-6 w-6" />
-               Ash-Sheikh-Fassy Mawatha, China Fort, Beruwala, Sri Lanka.
+            <li>
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="inline-flex items-center gap-2.5 text-sm text-ink/60 transition-colors hover:text-ink"
+              >
+                <Mail className="h-4 w-4" />
+                {CONTACT_EMAIL}
+              </a>
+            </li>
+            <li>
+              <a
+                href={SHOP_MAP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-start gap-2.5 text-sm leading-relaxed text-ink/60 transition-colors hover:text-ink"
+              >
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                {SHOP_ADDRESS}
+              </a>
             </li>
           </FooterColumn>
         </div>
 
-        <div className="flex flex-col gap-4 border-t border-ink/10 pt-8 text-xs text-ink/40 sm:flex-row sm:justify-between">
-          <span>© {new Date().getFullYear()} MYNIX Gemology. All rights reserved.</span>
-          <span className="uppercase tracking-[0.2em]">Engineered for accuracy</span>
+        <div className="flex flex-col gap-4 border-t border-ink/10 pb-16 pt-8 text-xs text-ink/40 sm:flex-row sm:items-center sm:justify-between sm:pb-0 sm:pr-20">
+          <span>
+            © {new Date().getFullYear()} MYNIX (PVT) LTD · Crafted &amp; developed by{" "}
+            <span className="text-ink/60">FS Technologies</span>
+          </span>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-6 gap-y-2">
+            <Link href="/privacy" className="transition-colors hover:text-ink">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-ink">
+              Terms &amp; Conditions
+            </Link>
+            <CookieSettingsButton className="transition-colors hover:text-ink" />
+          </nav>
         </div>
       </div>
     </footer>

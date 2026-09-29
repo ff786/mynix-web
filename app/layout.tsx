@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Newsreader } from "next/font/google";
 import "./globals.css";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -16,12 +17,27 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "MYNIX — Professional Gemology Tools & Equipment",
     template: "%s · MYNIX Gemology",
   },
-  description:
-    "Professional gemology tools and equipment — gem torches, loupes, polariscopes, refractometers, precision scales, lapidary supplies and appraisal accessories. Inquire directly on WhatsApp.",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_LK",
+    url: "/",
+    title: "MYNIX — Professional Gemology Tools & Equipment",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MYNIX — Professional Gemology Tools & Equipment",
+    description: SITE_DESCRIPTION,
+  },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {

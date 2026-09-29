@@ -1,23 +1,34 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { NAV_ITEMS, navHref } from "@/components/layout/navigation";
 import { buttonClasses } from "@/components/ui/Button";
+import FacebookIcon from "@/components/ui/FacebookIcon";
+import InstagramIcon from "@/components/ui/InstagramIcon";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
+import type { ProductCategory } from "@/types/product";
+import { cn } from "@/utils/cn";
 import { useModalBehaviour } from "@/utils/useModalBehaviour";
-import { getWhatsAppGeneralUrl } from "@/utils/whatsapp";
+import { FACEBOOK_URL, INSTAGRAM_URL, getWhatsAppGeneralUrl } from "@/utils/whatsapp";
+
+const SOCIALS = [
+  { label: "Instagram", href: INSTAGRAM_URL, Icon: InstagramIcon },
+  { label: "Facebook", href: FACEBOOK_URL, Icon: FacebookIcon },
+];
 
 type MobileNavProps = {
   open: boolean;
   onClose: () => void;
   onHome: boolean;
+  categories: ProductCategory[];
 };
 
-export default function MobileNav({ open, onClose, onHome }: MobileNavProps) {
+export default function MobileNav({ open, onClose, onHome, categories }: MobileNavProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [productsOpen, setProductsOpen] = useState(false);
   useModalBehaviour(open, onClose, panelRef);
 
   // Close if the viewport grows past the breakpoint where the drawer is hidden.
@@ -68,7 +79,7 @@ export default function MobileNav({ open, onClose, onHome }: MobileNavProps) {
               </button>
             </div>
 
-            <nav aria-label="Mobile" className="mt-12 flex-1">
+            <nav aria-label="Mobile" className="-mx-6 mt-12 flex-1 overflow-y-auto px-6">
               <ul className="space-y-1">
                 {links.map((link, i) => (
                   <motion.li
@@ -77,27 +88,98 @@ export default function MobileNav({ open, onClose, onHome }: MobileNavProps) {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.08 + i * 0.05, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    <Link
-                      href={link.href}
-                      onClick={onClose}
-                      className="block border-b border-white/5 py-4 text-2xl font-semibold tracking-tight text-white/80 transition-colors hover:text-white"
-                    >
-                      {link.label}
-                    </Link>
+                    {link.key === "products" && categories.length > 0 ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setProductsOpen((value) => !value)}
+                          aria-expanded={productsOpen}
+                          aria-controls="mobile-products"
+                          className="flex w-full items-center justify-between border-b border-white/5 py-4 text-2xl font-semibold tracking-tight text-white/80 transition-colors hover:text-white"
+                        >
+                          {link.label}
+                          <ChevronDown
+                            aria-hidden
+                            className={cn("h-5 w-5 transition-transform duration-300", productsOpen && "rotate-180")}
+                          />
+                        </button>
+                        <AnimatePresence initial={false}>
+                          {productsOpen && (
+                            <motion.ul
+                              id="mobile-products"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                              className="overflow-hidden border-b border-white/5"
+                            >
+                              {categories.map((category) => (
+                                <li key={category.id}>
+                                  <Link
+                                    href={`/catalog?category=${category.id}#shop`}
+                                    onClick={onClose}
+                                    className="flex items-center justify-between py-2.5 pl-1 text-base text-white/65 transition-colors hover:text-white"
+                                  >
+                                    {category.name}
+                                    <span className="text-xs tabular-nums text-white/35">{category.count}</span>
+                                  </Link>
+                                </li>
+                              ))}
+                              <li className="pb-3">
+                                <Link
+                                  href="/catalog"
+                                  onClick={onClose}
+                                  className="block py-2.5 pl-1 text-base font-medium text-white transition-colors hover:text-white/80"
+                                >
+                                  Browse all products →
+                                </Link>
+                              </li>
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        onClick={onClose}
+                        className="block border-b border-white/5 py-4 text-2xl font-semibold tracking-tight text-white/80 transition-colors hover:text-white"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </motion.li>
                 ))}
               </ul>
             </nav>
 
-            <a
-              href={getWhatsAppGeneralUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonClasses({ size: "lg", className: "w-full" })}
-            >
-              <WhatsAppIcon className="h-5 w-5" />
-              Quick Inquiry
-            </a>
+            <div className="space-y-3">
+              <Link href="/catalog" onClick={onClose} className={buttonClasses({ size: "lg", className: "w-full" })}>
+                Shop now
+              </Link>
+              <a
+                href={getWhatsAppGeneralUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-white/20 px-7 py-3.5 text-[15px] font-medium text-white/80 transition-colors hover:text-white"
+              >
+                <WhatsAppIcon className="h-5 w-5" />
+                Ask on WhatsApp
+              </a>
+              <div className="flex justify-center gap-3 pt-3">
+                {SOCIALS.map(({ label, href, Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`MYNIX on ${label}`}
+                    className="rounded-full border border-white/15 p-3 text-white/70 transition-colors hover:border-white/40 hover:text-white"
+                  >
+                    <Icon className="h-5 w-5" />
+                  </a>
+                ))}
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       )}

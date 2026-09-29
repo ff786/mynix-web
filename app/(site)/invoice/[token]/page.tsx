@@ -4,7 +4,11 @@ import OrderSummaryCard from "@/components/orders/OrderSummaryCard";
 import type { OrderSummary } from "@/lib/orders/actions";
 import { posRequest } from "@/lib/pos/client";
 
-export const metadata: Metadata = { title: "Your invoice", robots: { index: false, follow: false } };
+export const metadata: Metadata = {
+  title: "Your Invoice",
+  description: "Your MYNIX order invoice.",
+  robots: { index: false, follow: false },
+};
 
 /** Invoice link from the order SMS. Only website orders are shown here. */
 export default async function InvoicePage({ params }: PageProps<"/invoice/[token]">) {

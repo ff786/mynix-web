@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import TrackOrderForm from "@/components/orders/TrackOrderForm";
 
-export const metadata: Metadata = { title: "Track your order", robots: { index: false } };
+export const metadata: Metadata = {
+  title: "Track Your Order",
+  description: "Check the status of your MYNIX order with your order number and mobile number.",
+  alternates: { canonical: "/track" },
+};
 
 export default function TrackPage() {
   return (

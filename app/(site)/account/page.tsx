@@ -12,7 +12,11 @@ import type { OrderSummary } from "@/lib/orders/actions";
 import { posRequest } from "@/lib/pos/client";
 import { cn } from "@/utils/cn";
 
-export const metadata: Metadata = { title: "Your account", robots: { index: false } };
+export const metadata: Metadata = {
+  title: "Your Account",
+  description: "Sign in with your mobile number to manage your details, saved addresses and MYNIX orders.",
+  robots: { index: false },
+};
 
 /** Only paths on this site, so the sign-in can't bounce visitors elsewhere. */
 const safeNext = (value: unknown) => (typeof value === "string" && /^\/[a-z0-9/-]*$/.test(value) ? value : "/account");

@@ -37,6 +37,26 @@ async function get(path, token) {
 
 const sqlText = (value) => (value == null || value === "" ? "NULL" : `'${String(value).replace(/'/g, "''")}'`);
 
+// Website fields (full name, description, SEO…) exist once production runs POS
+// migration V22. Before that, local values are kept.
+const WEBSITE_FIELDS = [
+  ["fullName", "full_name"],
+  ["description", "description"],
+  ["seoTitle", "seo_title"],
+  ["seoDescription", "seo_description"],
+  ["seoKeywords", "seo_keywords"],
+  ["imageAlt", "image_alt"],
+];
+const websiteUpdates = (p) => [
+  ...WEBSITE_FIELDS.filter(([key]) => key in p).map(([key, column]) => `${column} = ${key === "fullName" ? `COALESCE(${sqlText(p[key])}, EXCLUDED.name)` : sqlText(p[key])}`),
+  ...("showOnWebsite" in p ? [`show_on_website = ${p.showOnWebsite === false ? "false" : "true"}`] : []),
+  ...(p.slug ? [`slug = ${sqlText(p.slug)}`] : []),
+].map((assignment) => `,\n      ${assignment}`).join("");
+
+// Page address from a name, as POS migration V22 makes it.
+const SLUG_SQL = (column) =>
+  `COALESCE(NULLIF(LEFT(TRIM(BOTH '-' FROM REGEXP_REPLACE(LOWER(${column}), '[^a-z0-9]+', '-', 'g')), 100), ''), 'product')`;
+
 console.log(`Reading the catalogue from ${PROD_API} (read-only).`);
 const username = await ask("Production POS username: ");
 const password = await ask("Production POS password: ", { hidden: true });
@@ -61,18 +81,35 @@ for (const c of categories) {
 }
 for (const p of products) {
   const category = categories.find((c) => c.id === p.categoryId)?.name ?? p.category;
-  statements.push(`INSERT INTO products (name, barcode, category_id, buying_price, selling_price, stock_quantity, minimum_stock, image_url, active)
-    VALUES (${sqlText(p.name)}, ${sqlText(p.barcode)}, (SELECT id FROM categories WHERE name = ${sqlText(category)}),
+  // New rows get a temporary unique address ("tmp-<barcode>"), replaced below.
+  statements.push(`INSERT INTO products (name, full_name, slug, barcode, category_id, buying_price, selling_price, stock_quantity, minimum_stock, image_url, active)
+    VALUES (${sqlText(p.name)}, ${sqlText(p.fullName || p.name)}, ${sqlText(p.slug || `tmp-${p.barcode}`)}, ${sqlText(p.barcode)},
+            (SELECT id FROM categories WHERE name = ${sqlText(category)}),
             ${Number(p.buyingPrice ?? 0)}, ${Number(p.sellingPrice ?? 0)}, ${Number(p.stockQuantity ?? 0)},
             ${Number(p.minimumStock ?? 0)}, ${sqlText(p.imageUrl)}, ${p.active === false ? "false" : "true"})
     ON CONFLICT (barcode) DO UPDATE SET name = EXCLUDED.name, category_id = EXCLUDED.category_id,
       buying_price = EXCLUDED.buying_price, selling_price = EXCLUDED.selling_price,
       stock_quantity = EXCLUDED.stock_quantity, minimum_stock = EXCLUDED.minimum_stock,
-      image_url = EXCLUDED.image_url, active = EXCLUDED.active;`);
+      image_url = EXCLUDED.image_url, active = EXCLUDED.active${websiteUpdates(p)};`);
 }
+// Real page addresses for new rows: from the full name, numbered by id if taken.
+statements.push(`WITH base AS (
+    SELECT id, active, ${SLUG_SQL("full_name")} AS slug FROM products WHERE slug LIKE 'tmp-%'
+  ), numbered AS (
+    SELECT id, slug, ROW_NUMBER() OVER (PARTITION BY slug ORDER BY active DESC, id) AS n FROM base
+  )
+  UPDATE products p
+  SET slug = CASE WHEN numbered.n = 1 AND NOT EXISTS (SELECT 1 FROM products o WHERE o.slug = numbered.slug)
+                  THEN numbered.slug ELSE numbered.slug || '-' || numbered.id END
+  FROM numbered WHERE numbered.id = p.id;`);
 // Hide the local sample products (they can't be deleted if test orders used them).
 const prodBarcodes = products.map((p) => sqlText(p.barcode)).join(",") || "''";
 statements.push(`UPDATE products SET active = false WHERE barcode NOT IN (${prodBarcodes});`);
+// Local-only categories: removed when empty, hidden when old test sales still use their products.
+const prodCategories = categories.map((c) => sqlText(c.name)).join(",") || "''";
+statements.push(`DELETE FROM categories c WHERE c.name NOT IN (${prodCategories})
+  AND NOT EXISTS (SELECT 1 FROM products p WHERE p.category_id = c.id);`);
+statements.push(`UPDATE categories SET active = false WHERE name NOT IN (${prodCategories});`);
 statements.push("COMMIT;");
 
 execFileSync("docker", ["compose", "-f", `${STACK}/docker-compose.yml`, "exec", "-T", "db",

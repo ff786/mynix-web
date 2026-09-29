@@ -1,4 +1,4 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import BrandStory from "@/components/about/BrandStory";
 import MynixTorchViewer from "@/components/hero/MynixTorchViewer";
 import Button from "@/components/ui/Button";
@@ -10,19 +10,48 @@ import NewsletterSection from "@/components/newsletter/NewsletterSection";
 import ProductRanges from "@/components/showcase/ProductRanges";
 import { ArrowRight } from "lucide-react";
 import { getStorefront } from "@/lib/catalog";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { CONTACT_EMAIL, FACEBOOK_URL, INSTAGRAM_URL, WHATSAPP_NUMBER } from "@/utils/whatsapp";
 
 // The hero opens on a white studio backdrop.
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
 export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+/** Search engines' view of the business: contact details and social profiles (sameAs). */
+const ORGANIZATION_LD = {
+  "@context": "https://schema.org",
+  "@type": "Store",
+  name: "MYNIX (PVT) LTD",
+  alternateName: SITE_NAME,
+  url: SITE_URL,
+  logo: `${SITE_URL}/apple-icon`,
+  image: `${SITE_URL}/opengraph-image`,
+  description: SITE_DESCRIPTION,
+  email: CONTACT_EMAIL,
+  telephone: `+${WHATSAPP_NUMBER}`,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Ash-Sheikh-Fassy Mawatha, China Fort",
+    addressLocality: "Beruwala",
+    addressCountry: "LK",
+  },
+  sameAs: [INSTAGRAM_URL, FACEBOOK_URL],
+};
+
 export default async function Home() {
-  const { products } = await getStorefront();
+  const { products, categories } = await getStorefront();
   const flagship = products.find((p) => p.flagship);
   const flagshipRef = { id: flagship?.id ?? "", name: flagship?.name ?? "MYNIX Gemology Torch" };
 
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_LD).replace(/</g, "\\u003c") }}
+      />
       <MynixTorchViewer flagship={flagshipRef} />
 
       <FlagshipSpecs flagship={flagshipRef} />
@@ -46,11 +75,11 @@ export default async function Home() {
             </div>
             <Reveal as="p" delay={0.3} className="max-w-sm leading-relaxed text-ink/60">
               Everything the gem trade relies on from cutting and weighing to inspection, handling and
-              presentation. Tap a range to ask us on WhatsApp.
+              presentation. Pick a category to shop its full range.
             </Reveal>
           </div>
 
-          <ProductRanges />
+          <ProductRanges categories={categories} />
 
           <Reveal className="mt-12 flex justify-center">
             <Button href="/catalog" variant="secondary" size="lg">
@@ -61,7 +90,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <BrandStory productCount={products.length} />
+      <BrandStory productCount={products.length} categoryCount={categories.length} />
 
       <NewsletterSection />
     </main>

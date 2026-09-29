@@ -41,6 +41,7 @@ export default function ScrollyBeats({ progress, headingColor, bodyColor, ready,
           <Eyebrow color={bodyColor}>Gemological Tools &amp; Equipment</Eyebrow>
         </Stagger>
         <Heading
+          as="h1"
           color={headingColor}
           lines={["Unleash your", "passion with", "precision"]}
           size="text-[length:clamp(2.5rem,min(4.2vw,7.4vh),6rem)]"

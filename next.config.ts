@@ -3,10 +3,10 @@ import type { NextConfig } from "next";
 /**
  * Baseline hardening for every page. The CSP only sets directives that can't
  * break the site's scripts or styles: no framing (clickjacking), no plugins,
- * and forms/<base> limited to this origin.
+ * forms/<base> limited to this origin, and any http:// request upgraded to https.
  */
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

@@ -4,7 +4,11 @@ import StoreUnavailable from "@/components/catalog/StoreUnavailable";
 import { getStorefront } from "@/lib/catalog";
 import { deliveryFee } from "@/lib/orders/config";
 
-export const metadata: Metadata = { title: "Cart", robots: { index: false } };
+export const metadata: Metadata = {
+  title: "Your Cart",
+  description: "Review the gemology tools in your MYNIX cart before checkout.",
+  robots: { index: false },
+};
 
 export default async function CartPage() {
   const { products, available } = await getStorefront();

@@ -5,7 +5,11 @@ import { getStorefront } from "@/lib/catalog";
 import { getCustomerProfile, getSavedAddresses } from "@/lib/customer/profile";
 import { deliveryFee } from "@/lib/orders/config";
 
-export const metadata: Metadata = { title: "Checkout", robots: { index: false } };
+export const metadata: Metadata = {
+  title: "Checkout",
+  description: "Enter your delivery details and place your MYNIX order — cash on delivery anywhere in Sri Lanka.",
+  robots: { index: false },
+};
 
 export default async function CheckoutPage() {
   const [{ products, available }, customer, addresses] = await Promise.all([

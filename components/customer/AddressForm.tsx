@@ -56,7 +56,7 @@ export default function AddressForm({ address, onDone }: AddressFormProps) {
             </option>
           ))}
         </select>
-        <input name="postalCode" maxLength={20} defaultValue={address?.postalCode ?? ""} aria-label="Postal code (optional)" placeholder="Postal code" autoComplete="postal-code" className={accountInput} />
+        <input name="postalCode" maxLength={20} inputMode="numeric" pattern="[0-9]{5}" title="Sri Lankan postal codes have 5 digits, e.g. 10350." defaultValue={address?.postalCode ?? ""} aria-label="Postal code (optional)" placeholder="Postal code" autoComplete="postal-code" className={accountInput} />
       </div>
       {!address?.defaultAddress && (
         <label className="flex items-center gap-2 text-sm text-white/70">

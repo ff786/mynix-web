@@ -34,11 +34,30 @@ export default function TrackOrderForm() {
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <label className="space-y-2 text-sm text-white/70">
           <span className="block">Order number</span>
-          <input name="invoiceNumber" required placeholder="INV-20260928-0012" maxLength={24} className={inputClass} />
+          <input
+            name="invoiceNumber"
+            required
+            placeholder="INV-20260928-0012"
+            maxLength={24}
+            pattern="\s*[Ii][Nn][Vv]-?[0-9]{8}-?[0-9]{1,6}\s*"
+            title="Your order number looks like INV-20260928-0012."
+            autoCapitalize="characters"
+            className={inputClass}
+          />
         </label>
         <label className="space-y-2 text-sm text-white/70">
           <span className="block">Mobile number</span>
-          <input name="phone" required inputMode="tel" placeholder="077 123 4567" maxLength={20} className={inputClass} />
+          <input
+            name="phone"
+            required
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="077 123 4567"
+            maxLength={20}
+            pattern="[+]?[0-9 \-]{9,16}"
+            title="Enter the Sri Lankan mobile number you ordered with, e.g. 077 123 4567."
+            className={inputClass}
+          />
         </label>
         <button
           type="submit"

@@ -276,6 +276,9 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
                   id="postalCode"
                   name="postalCode"
                   maxLength={20}
+                  inputMode="numeric"
+                  pattern="[0-9]{5}"
+                  title="Sri Lankan postal codes have 5 digits, e.g. 10350."
                   autoComplete="postal-code"
                   defaultValue={prefill?.postalCode ?? undefined}
                   className={inputClass}
