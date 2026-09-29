@@ -17,6 +17,7 @@ import {
   SHOP_MAP_URL,
   WHATSAPP_DISPLAY,
   WHATSAPP_NUMBER,
+  getDeveloperWhatsAppUrl,
   getWhatsAppGeneralUrl,
 } from "@/utils/whatsapp";
 
@@ -173,7 +174,19 @@ export default function Footer() {
         <div className="flex flex-col gap-4 border-t border-ink/10 pb-16 pt-8 text-xs text-ink/40 sm:flex-row sm:items-center sm:justify-between sm:pb-0 sm:pr-20">
           <span>
             © {new Date().getFullYear()} MYNIX (PVT) LTD · Crafted &amp; developed by{" "}
-            <span className="text-ink/60">FS Technologies</span>
+            <a
+              href={getDeveloperWhatsAppUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="FS Technologies — chat on WhatsApp (opens in a new tab)"
+              className="group inline-flex items-center gap-0.5 rounded-sm text-ink/60 underline decoration-ink/0 underline-offset-4 transition-colors duration-300 hover:text-ink hover:decoration-ink/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              FS Technologies
+              <ArrowUpRight
+                aria-hidden="true"
+                className="h-3 w-3 -translate-x-0.5 translate-y-0.5 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+              />
+            </a>
           </span>
           <nav aria-label="Legal" className="flex flex-wrap gap-x-6 gap-y-2">
             <Link href="/privacy" className="transition-colors hover:text-ink">

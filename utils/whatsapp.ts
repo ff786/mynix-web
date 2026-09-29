@@ -21,3 +21,12 @@ export function getWhatsAppGeneralUrl(
 ): string {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
+
+/** Site developer credit in the footer — a separate line from the shop's. */
+export const DEVELOPER_WHATSAPP_NUMBER = "94704494812";
+
+export function getDeveloperWhatsAppUrl(
+  message = "Hello FS Technologies, I came across your work on the MYNIX website and would like to discuss a project.",
+): string {
+  return `https://wa.me/${DEVELOPER_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
