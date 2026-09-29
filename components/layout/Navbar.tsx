@@ -9,7 +9,14 @@ import AccountButton from "@/components/cart/AccountButton";
 import CartButton from "@/components/cart/CartButton";
 import MobileNav from "@/components/layout/MobileNav";
 import ProductsMenu from "@/components/layout/ProductsMenu";
-import { NAV_ITEMS, navHref, sectionHref } from "@/components/layout/navigation";
+import {
+  NAV_ITEMS,
+  navClick,
+  navHref,
+  scrollToSectionOnHome,
+  scrollToTopOnHome,
+  sectionHref,
+} from "@/components/layout/navigation";
 import { buttonClasses } from "@/components/ui/Button";
 import type { ProductCategory } from "@/types/product";
 import { cn } from "@/utils/cn";
@@ -35,7 +42,6 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
   const headerRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const pointerType = useRef("");
   const hasMenu = categories.length > 0;
 
   // Hover opens; leaving the header closes after a short grace period.
@@ -91,7 +97,8 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
           className="mx-auto flex h-[72px] max-w-[1600px] items-center justify-between px-6 sm:px-10"
         >
           <Link
-            href={sectionHref("top", onHome)}
+            href="/"
+            onClick={(e) => scrollToTopOnHome(e, onHome)}
             className="text-[15px] font-semibold uppercase tracking-[0.42em]"
           >
             Mynix
@@ -100,22 +107,32 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
           <ul className="hidden items-center gap-9 lg:flex">
             {NAV_ITEMS.map((item) =>
               item.key === "products" && hasMenu ? (
-                <li key={item.key} onPointerEnter={(e) => e.pointerType === "mouse" && openOnHover()}>
+                // Hover opens the category menu; clicking "Products" scrolls to the
+                // Products section. The arrow opens the menu for keyboard and touch.
+                <li
+                  key={item.key}
+                  onPointerEnter={(e) => e.pointerType === "mouse" && openOnHover()}
+                  className="flex items-center gap-1"
+                >
+                  <Link
+                    href={navHref(item, onHome)}
+                    onClick={(e) => {
+                      closeProducts();
+                      navClick(item, onHome)?.(e);
+                    }}
+                    className={cn(navLinkClass, productsOpen && "opacity-100")}
+                  >
+                    {item.label}
+                  </Link>
                   <button
                     ref={triggerRef}
                     type="button"
-                    // With a mouse, hover has already opened it: a click keeps it open.
-                    // Touch and keyboard toggle it.
-                    onPointerDown={(e) => (pointerType.current = e.pointerType)}
-                    onClick={(e) => {
-                      const mouse = e.detail > 0 && pointerType.current === "mouse";
-                      setProductsOpen((open) => mouse || !open);
-                    }}
+                    onClick={() => setProductsOpen((open) => !open)}
                     aria-expanded={productsOpen}
                     aria-controls={PRODUCTS_MENU_ID}
-                    className={cn(navLinkClass, "inline-flex items-center gap-1.5", productsOpen && "opacity-100")}
+                    aria-label="Product categories"
+                    className={cn("-m-1 rounded-full p-1 opacity-60 transition-opacity hover:opacity-100", productsOpen && "opacity-100")}
                   >
-                    {item.label}
                     <ChevronDown
                       aria-hidden
                       className={cn("h-3.5 w-3.5 transition-transform duration-300", productsOpen && "rotate-180")}
@@ -123,8 +140,16 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
                   </button>
                 </li>
               ) : (
-                <li key={item.key} onPointerEnter={(e) => e.pointerType === "mouse" && closeSoon()}>
-                  <Link href={navHref(item, onHome)} className={navLinkClass}>
+                <li
+                  key={item.key}
+                  onPointerEnter={(e) => e.pointerType === "mouse" && closeSoon()}
+                  className="flex items-center"
+                >
+                  <Link
+                    href={navHref(item, onHome)}
+                    onClick={navClick(item, onHome)}
+                    className={navLinkClass}
+                  >
                     {item.label}
                   </Link>
                 </li>
@@ -161,7 +186,9 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
               id={PRODUCTS_MENU_ID}
               categories={categories}
               productCount={productCount}
+              allCategoriesHref={sectionHref("products", onHome)}
               onNavigate={closeProducts}
+              onAllCategories={(e) => scrollToSectionOnHome(e, "products", onHome)}
             />
           )}
         </AnimatePresence>

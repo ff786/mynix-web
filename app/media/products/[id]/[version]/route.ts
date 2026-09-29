@@ -4,7 +4,8 @@ import { getCatalogEntries } from "@/lib/catalog";
 
 /**
  * Serves a product photo from this website's own address, so visitors never
- * see where it's stored. The link comes from the POS, where staff type it in,
+ * see where it's stored. The link comes from the POS (an upload in media
+ * storage, or a link staff typed in),
  * so it's fetched defensively: https only, public addresses only (no internal
  * or cloud-metadata hosts), raster images only (no SVG), size and time limits.
  */
@@ -14,12 +15,13 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]);
 
 export async function GET(_request: Request, { params }: RouteContext<"/media/products/[id]/[version]">) {
-  const { id } = await params;
+  const { id, version } = await params;
   const entry = (await getCatalogEntries().catch(() => [])).find((e) => e.product.id === id);
-  if (!entry?.posImageUrl) return notFound();
+  const url = entry && Object.hasOwn(entry.posImages, version) ? entry.posImages[version] : null;
+  if (!url) return notFound();
 
   try {
-    const upstream = await fetchPublicImage(entry.posImageUrl);
+    const upstream = await fetchPublicImage(url);
     const declared = upstream.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ?? "";
     // Some shops send the non-standard "image/jpg".
     const type = declared === "image/jpg" || declared === "image/pjpeg" ? "image/jpeg" : declared;
@@ -64,6 +66,8 @@ async function fetchPublicImage(url: string): Promise<Response> {
 }
 
 async function assertPublicHttps(url: URL) {
+  // The local stack's storage stand-in (MEDIA_DEV_ORIGIN) is the only non-public host allowed.
+  if (process.env.MEDIA_DEV_ORIGIN && url.origin === process.env.MEDIA_DEV_ORIGIN) return;
   if (url.protocol !== "https:" || url.username || url.password) throw new Error("Blocked URL");
   const host = url.hostname.replace(/^\[|\]$/g, "");
   const addresses = isIP(host) ? [{ address: host }] : await lookup(host, { all: true });

@@ -83,7 +83,7 @@ export default async function Home() {
 
           <Reveal className="mt-12 flex justify-center">
             <Button href="/catalog" variant="secondary" size="lg">
-              Browse the full catalog
+              Browse all products..
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Reveal>

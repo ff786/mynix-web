@@ -5,26 +5,47 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Check, X } from "lucide-react";
 import ProductDescription from "@/components/catalog/ProductDescription";
-import ProductMedia from "@/components/catalog/ProductMedia";
+import ProductGallery from "@/components/catalog/ProductGallery";
 import PurchasePanel from "@/components/catalog/PurchasePanel";
+import VariantPicker from "@/components/catalog/VariantPicker";
 import type { Product } from "@/types/product";
 import { formatLkr } from "@/utils/money";
 import { useModalBehaviour } from "@/utils/useModalBehaviour";
 
 type ProductModalProps = {
   product: Product | null;
+  /** All options when the product is part of a variable product (else just the product). */
+  options: Product[];
+  /** Switch to another option in place. */
+  onSelect: (product: Product) => void;
   onClose: () => void;
 };
 
-export default function ProductModal({ product, onClose }: ProductModalProps) {
+export default function ProductModal({ product, options, onSelect, onClose }: ProductModalProps) {
   return (
     <AnimatePresence>
-      {product && <ModalPanel key={product.id} product={product} onClose={onClose} />}
+      {product && (
+        // Keyed by listing, so choosing another option updates the open dialog instead of re-opening it.
+        <ModalPanel
+          key={product.variant?.group ?? product.id}
+          product={product}
+          options={options}
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+      )}
     </AnimatePresence>
   );
 }
 
-function ModalPanel({ product, onClose }: { product: Product; onClose: () => void }) {
+type ModalPanelProps = {
+  product: Product;
+  options: Product[];
+  onSelect: (product: Product) => void;
+  onClose: () => void;
+};
+
+function ModalPanel({ product, options, onSelect, onClose }: ModalPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   useModalBehaviour(true, onClose, panelRef);
 
@@ -61,12 +82,14 @@ function ModalPanel({ product, onClose }: { product: Product; onClose: () => voi
           <X className="h-5 w-5" />
         </button>
 
-        <ProductMedia
-          product={product}
-          sizes="(min-width: 768px) 448px, 100vw"
-          fit="contain"
-          className="aspect-[4/3] shrink-0 md:aspect-auto md:min-h-full"
-        />
+        <div className="shrink-0 md:p-6 md:pr-0">
+          <ProductGallery
+            key={product.id}
+            product={product}
+            sizes="(min-width: 768px) 424px, 100vw"
+            className="aspect-[4/3] md:aspect-square md:rounded-2xl"
+          />
+        </div>
 
         <div className="flex flex-col p-6 sm:p-10">
           <span className="w-fit rounded-full border border-white/10 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/60">
@@ -80,6 +103,8 @@ function ModalPanel({ product, onClose }: { product: Product; onClose: () => voi
           <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/40">
             {product.inStock ? "In stock" : "Sold out"}
           </p>
+          <VariantPicker current={product} options={options} onSelect={onSelect} className="mt-6" />
+
           {product.description && <ProductDescription description={product.description} className="mt-5" />}
 
           {product.features.length > 0 && (
@@ -97,7 +122,7 @@ function ModalPanel({ product, onClose }: { product: Product; onClose: () => voi
           )}
 
           <div className="mt-10 sm:mt-auto sm:pt-10">
-            <PurchasePanel product={product} />
+            <PurchasePanel key={product.id} product={product} />
             <Link
               href={`/products/${product.id}`}
               className="mt-1 inline-flex w-full items-center justify-center gap-1.5 py-2 text-sm text-white/55 underline-offset-4 transition-colors hover:text-white hover:underline"

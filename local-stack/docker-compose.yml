@@ -38,9 +38,25 @@ services:
       MYNIX_PUBLIC_INVOICE_BASE_URL: http://localhost:5173/invoice
       # Links in website-order SMS (invoice, tracking) point here.
       MYNIX_WEBSITE_URL: http://localhost:3000
+      # Uploaded photos/videos go to the local S3 stand-in below (R2 in production).
+      MEDIA_STORAGE_ENDPOINT: http://media:9090
+      MEDIA_STORAGE_BUCKET: mynix-media
+      MEDIA_STORAGE_ACCESS_KEY: local
+      MEDIA_STORAGE_SECRET_KEY: local
+      MEDIA_PUBLIC_BASE_URL: http://localhost:9090/mynix-media
       PORT: "8080"
     ports:
       - "127.0.0.1:8080:8080"
+
+  # Local stand-in for Cloudflare R2 (S3 API). Files are readable at
+  # http://localhost:9090/mynix-media/<key>, like R2's public bucket address.
+  media:
+    image: adobe/s3mock:latest
+    # Test files are kept only while the container exists (local testing only).
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: mynix-media
+    ports:
+      - "127.0.0.1:9090:9090"
 
 volumes:
   pos-data:

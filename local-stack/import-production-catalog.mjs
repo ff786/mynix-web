@@ -1,6 +1,6 @@
-// Copies the REAL catalogue (categories + products, with prices, stock and
-// image links) from the production POS into the LOCAL copy, so the local
-// website shows your actual products and photos.
+// Copies the REAL catalogue (categories, products with prices and stock,
+// variant groups, photo/video links) from the production POS into the LOCAL
+// copy, so the local website shows your actual products and photos.
 //
 // Production is only READ (GET requests). No customers, sales or other
 // personal data are copied. You type your production POS login here; it is
@@ -70,10 +70,17 @@ if (!login.ok) throw new Error(`Login failed (${login.status}). Check the userna
 const { token } = await login.json();
 
 const [categories, products] = await Promise.all([get("/categories", token), get("/products", token)]);
-console.log(`Found ${categories.length} categories and ${products.length} products.`);
+// Variant groups exist once production runs POS migration V23.
+const groups = await get("/product-variant-groups", token).catch(() => []);
+console.log(`Found ${categories.length} categories, ${products.length} products and ${groups.length} variant groups.`);
 
-// Upsert by name (categories) and barcode (products), keeping production's barcodes.
+// Upsert by name (categories, variant groups) and barcode (products), keeping production's barcodes.
 const statements = ["BEGIN;"];
+for (const g of groups) {
+  statements.push(`INSERT INTO product_variant_groups (name, option_name)
+    SELECT ${sqlText(g.name)}, ${sqlText(g.optionName || "Option")}
+    WHERE NOT EXISTS (SELECT 1 FROM product_variant_groups WHERE name = ${sqlText(g.name)});`);
+}
 for (const c of categories) {
   statements.push(`INSERT INTO categories (name, description, active)
     VALUES (${sqlText(c.name)}, ${sqlText(c.description)}, ${c.active === false ? "false" : "true"})
@@ -92,6 +99,27 @@ for (const p of products) {
       stock_quantity = EXCLUDED.stock_quantity, minimum_stock = EXCLUDED.minimum_stock,
       image_url = EXCLUDED.image_url, active = EXCLUDED.active${websiteUpdates(p)};`);
 }
+// Variant group membership and photos/videos (once production sends them).
+for (const p of products) {
+  const product = `(SELECT id FROM products WHERE barcode = ${sqlText(p.barcode)})`;
+  if ("variantGroupId" in p) {
+    statements.push(`UPDATE products SET
+      variant_group_id = ${p.variantGroupName ? `(SELECT id FROM product_variant_groups WHERE name = ${sqlText(p.variantGroupName)} ORDER BY id LIMIT 1)` : "NULL"},
+      variant_label = ${sqlText(p.variantLabel)}
+      WHERE barcode = ${sqlText(p.barcode)};`);
+  }
+  if (Array.isArray(p.media)) {
+    // Production uploads stay in production storage; locally they're links to it.
+    statements.push(`DELETE FROM product_media WHERE product_id = ${product};`);
+    p.media.forEach((m, position) => {
+      const youtube = m.type === "YOUTUBE";
+      statements.push(`INSERT INTO product_media (product_id, type, url, youtube_id, alt_text, shared, position)
+        VALUES (${product}, ${sqlText(m.type)}, ${youtube ? "NULL" : sqlText(m.url)}, ${youtube ? sqlText(m.youtubeId) : "NULL"},
+                ${sqlText(m.altText)}, ${m.shared ? "true" : "false"}, ${position});`);
+    });
+  }
+}
+
 // Real page addresses for new rows: from the full name, numbered by id if taken.
 statements.push(`WITH base AS (
     SELECT id, active, ${SLUG_SQL("full_name")} AS slug FROM products WHERE slug LIKE 'tmp-%'

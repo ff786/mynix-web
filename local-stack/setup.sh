@@ -68,6 +68,8 @@ done
 } >> "$ENV_FILE"
 # Customer sign-in cookies — only if not set yet.
 grep -q '^CUSTOMER_SESSION_SECRET=' "$ENV_FILE" || echo "CUSTOMER_SESSION_SECRET=$(openssl rand -hex 32)" >> "$ENV_FILE"
+# Photos/videos uploaded locally live in the S3 stand-in (plain http on localhost).
+grep -q '^MEDIA_DEV_ORIGIN=' "$ENV_FILE" || echo "MEDIA_DEV_ORIGIN=http://localhost:9090" >> "$ENV_FILE"
 
 cat <<EOF
 

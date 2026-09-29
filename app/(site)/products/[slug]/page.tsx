@@ -4,11 +4,13 @@ import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import ProductCard from "@/components/catalog/ProductCard";
 import ProductDescription from "@/components/catalog/ProductDescription";
-import ProductMedia from "@/components/catalog/ProductMedia";
+import ProductGallery from "@/components/catalog/ProductGallery";
 import PurchasePanel from "@/components/catalog/PurchasePanel";
+import VariantPicker from "@/components/catalog/VariantPicker";
 import StoreUnavailable from "@/components/catalog/StoreUnavailable";
 import { getCatalogEntry, getStorefront, type CatalogEntry } from "@/lib/catalog";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { groupListings, optionsOf } from "@/utils/listings";
 import { formatLkr } from "@/utils/money";
 
 const DESCRIPTION_LENGTH = 155;
@@ -65,7 +67,10 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const entry = await getCatalogEntry(slug);
   if (!entry) notFound();
   const { product } = entry;
-  const related = products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 3);
+  const options = optionsOf(product, products);
+  const related = groupListings(products.filter((p) => p.category === product.category))
+    .filter((listing) => !listing.products.some((p) => p.id === product.id))
+    .slice(0, 3);
   const url = absolute(`/products/${product.id}`);
   const categoryUrl = absolute(`/catalog?category=${product.category}`);
 
@@ -76,7 +81,9 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
       "@type": "Product",
       name: product.name,
       description: metaDescription(entry),
-      image: product.image ? [absolute(product.image)] : undefined,
+      image: product.media.some((m) => m.type === "image")
+        ? product.media.flatMap((m) => (m.type === "image" ? [absolute(m.src)] : []))
+        : undefined,
       category: product.categoryName,
       brand: { "@type": "Brand", name: SITE_NAME },
       url,
@@ -131,12 +138,12 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
         </nav>
 
         <div className="grid gap-10 md:grid-cols-2 md:gap-14">
-          <ProductMedia
+          <ProductGallery
+            key={product.id}
             product={product}
             priority
             sizes="(min-width: 1152px) 548px, (min-width: 768px) 50vw, 100vw"
-            fit="contain"
-            className="aspect-square overflow-hidden rounded-3xl border border-white/10"
+            className="aspect-square rounded-3xl border border-white/10"
           />
 
           <div className="flex flex-col">
@@ -151,8 +158,10 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
               {product.inStock ? "In stock · Cash on delivery island-wide" : "Sold out"}
             </p>
 
+            <VariantPicker current={product} options={options} asLinks className="mt-8" />
+
             <div className="mt-8">
-              <PurchasePanel product={product} />
+              <PurchasePanel key={product.id} product={product} />
             </div>
           </div>
         </div>
@@ -178,8 +187,8 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
               More in {product.categoryName}
             </h2>
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {related.map((item) => (
-                <ProductCard key={item.id} product={item} headingAs="h3" />
+              {related.map((listing) => (
+                <ProductCard key={listing.key} listing={listing} headingAs="h3" />
               ))}
             </div>
           </section>

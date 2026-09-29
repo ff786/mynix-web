@@ -4,7 +4,9 @@ import { unstable_cache } from "next/cache";
 import { PRODUCTS as CONTENT } from "@/data/products";
 import { CATEGORY_HIGHLIGHTS } from "@/data/ranges";
 import { isPosConfigured, posRequest } from "@/lib/pos/client";
-import type { Product, ProductCategory } from "@/types/product";
+import type { Product, ProductCategory, ProductMedia } from "@/types/product";
+import { withAutoVariants } from "@/utils/autoVariants";
+import { groupListings, withSharedMedia } from "@/utils/listings";
 
 /**
  * The storefront catalogue: every active POS product (name, category, price,
@@ -23,19 +25,35 @@ type PosProduct = {
   seoDescription: string | null;
   seoKeywords: string | null;
   imageAlt: string | null;
+  variantGroupId: number | null;
+  variantGroupName: string | null;
+  variantOptionName: string | null;
+  variantLabel: string | null;
   categoryId: number;
   category: string;
   price: number;
   availableQuantity: number;
   imageUrl: string | null;
+  media?: PosMedia[];
+};
+
+type PosMedia = {
+  type: "IMAGE" | "VIDEO" | "YOUTUBE";
+  url: string | null;
+  youtubeId: string | null;
+  altText: string | null;
+  shared: boolean;
 };
 
 /** Server-side view of a product: what browsers see plus what ordering and photos need. */
 export type CatalogEntry = {
   product: Product;
   barcode: string;
-  /** The POS photo URL, fetched only by the website's server (see /media/products). */
-  posImageUrl: string | null;
+  /**
+   * This product's photo links by version (the last part of their
+   * /media/products/{id}/{version} address), fetched only by this server.
+   */
+  posImages: Record<string, string>;
   /** Per-product search settings from the POS; blank fields fall back to name/description. */
   seo: ProductSeo;
 };
@@ -69,21 +87,63 @@ function firstParagraph(description: string): string {
 
 const contentByName = new Map(CONTENT.map((content) => [normalise(content.name), content]));
 
-/** Only public https photo links are ever fetched. */
-const safeImageUrl = (url: string | null) => {
+/**
+ * Only public https links are used. MEDIA_DEV_ORIGIN (local stack only, e.g.
+ * http://localhost:9090) lets the local storage stand-in through as well.
+ */
+export const isAllowedMediaUrl = (url: URL) =>
+  (url.protocol === "https:" && !url.username && !url.password) ||
+  (!!process.env.MEDIA_DEV_ORIGIN && url.origin === process.env.MEDIA_DEV_ORIGIN);
+
+const safeMediaUrl = (url: string | null) => {
   if (!url) return null;
   try {
-    return new URL(url.trim()).protocol === "https:" ? url.trim() : null;
+    return isAllowedMediaUrl(new URL(url.trim())) ? url.trim() : null;
   } catch {
     return null;
   }
 };
 
+const version = (url: string) => createHash("sha256").update(url).digest("hex").slice(0, 10);
+
+/** POS media -> gallery items; photos are addressed through this website. */
+function galleryOf(id: string, row: PosProduct) {
+  // An older POS only sends the single photo link.
+  const items: PosMedia[] =
+    row.media ?? (row.imageUrl ? [{ type: "IMAGE", url: row.imageUrl, youtubeId: null, altText: null, shared: false }] : []);
+  const posImages: Record<string, string> = {};
+  const media: ProductMedia[] = [];
+
+  for (const item of items) {
+    if (item.type === "YOUTUBE") {
+      if (item.youtubeId && /^[A-Za-z0-9_-]{11}$/.test(item.youtubeId)) {
+        media.push({ type: "youtube", id: item.youtubeId, shared: item.shared });
+      }
+      continue;
+    }
+    const url = safeMediaUrl(item.url);
+    if (!url) continue;
+    if (item.type === "VIDEO") {
+      media.push({ type: "video", src: url, shared: item.shared });
+    } else {
+      const v = version(url);
+      posImages[v] = url;
+      media.push({
+        type: "image",
+        src: `/media/products/${id}/${v}`,
+        alt: item.altText?.trim() || row.imageAlt?.trim() || undefined,
+        shared: item.shared,
+      });
+    }
+  }
+  return { media, posImages };
+}
+
 async function loadCatalog(): Promise<CatalogEntry[]> {
   const rows = await posRequest<PosProduct[]>("/store/products");
   const usedIds = new Set<string>();
 
-  return rows.map((row) => {
+  const entries: CatalogEntry[] = rows.map((row) => {
     // The POS keeps page addresses unique; the fallback covers an older POS.
     const base = row.slug?.trim() || slugify(row.name);
     let id = base;
@@ -95,13 +155,13 @@ async function loadCatalog(): Promise<CatalogEntry[]> {
     const posDescription = row.description?.trim() || null;
     const description = posDescription ?? content?.description ?? "";
     const available = Math.max(0, row.availableQuantity);
-    const posImageUrl = safeImageUrl(row.imageUrl);
-    // The version changes with the photo link, so browsers pick up a new photo.
-    const photoVersion = posImageUrl && createHash("sha256").update(posImageUrl).digest("hex").slice(0, 10);
+    // Photo addresses change with the photo link, so browsers pick up new photos.
+    const { media, posImages } = galleryOf(id, row);
+    const mainImage = media.find((m) => m.type === "image");
 
     return {
       barcode: row.barcode,
-      posImageUrl,
+      posImages,
       seo: {
         title: row.seoTitle?.trim() || null,
         description: row.seoDescription?.trim() || null,
@@ -121,15 +181,30 @@ async function loadCatalog(): Promise<CatalogEntry[]> {
         description,
         summary: firstParagraph(description),
         features: posDescription ? [] : (content?.features ?? []),
-        image: posImageUrl ? `/media/products/${id}/${photoVersion}` : content?.image,
-        imageAlt: row.imageAlt?.trim() || undefined,
+        image: mainImage?.src ?? content?.image,
+        imageAlt: mainImage?.alt ?? (row.imageAlt?.trim() || undefined),
+        media,
+        variant:
+          row.variantGroupId && row.variantLabel
+            ? {
+                group: createHash("sha256").update(`variant-group:${row.variantGroupId}`).digest("hex").slice(0, 10),
+                groupName: row.variantGroupName ?? row.name,
+                optionName: row.variantOptionName ?? "Option",
+                label: row.variantLabel,
+              }
+            : undefined,
         flagship: content?.flagship ?? false,
       },
     };
   });
+
+  // Same category + same price = one listing with options (POS variant groups win),
+  // then each option also shows its siblings' "All options" media.
+  const products = withSharedMedia(withAutoVariants(entries.map((entry) => entry.product)));
+  return entries.map((entry, i) => ({ ...entry, product: products[i] }));
 }
 
-const cachedCatalog = unstable_cache(loadCatalog, ["pos-catalog-v2"], {
+const cachedCatalog = unstable_cache(loadCatalog, ["pos-catalog-v5"], {
   revalidate: 60,
   tags: [CATALOG_TAG],
 });
@@ -171,10 +246,11 @@ export async function getStorefront(): Promise<Storefront> {
   try {
     const products = (await cachedCatalog()).map((entry) => entry.product);
     const categories = new Map<string, ProductCategory>();
-    for (const p of products) {
-      const category = categories.get(p.category);
+    for (const listing of groupListings(products)) {
+      const { category: id, categoryName: name } = listing.lead;
+      const category = categories.get(id);
       if (category) category.count += 1;
-      else categories.set(p.category, { id: p.category, name: p.categoryName, count: 1, highlights: [] });
+      else categories.set(id, { id, name, count: 1, highlights: [] });
     }
     for (const category of categories.values()) {
       category.highlights = highlightFor(category.name)?.items ?? [];

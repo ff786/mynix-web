@@ -10,6 +10,10 @@ type ProductsMenuProps = {
   id: string;
   categories: ProductCategory[];
   productCount: number;
+  /** The Products section on the home page (all category tiles). */
+  allCategoriesHref: string;
+  /** Lets the landing page scroll to its Products section itself. */
+  onAllCategories: (event: React.MouseEvent) => void;
   onNavigate: () => void;
 };
 
@@ -17,7 +21,14 @@ type ProductsMenuProps = {
  * Desktop "Products" menu: a full-width panel under the navbar listing the POS
  * categories. Each opens the catalog filtered to that category.
  */
-export default function ProductsMenu({ id, categories, productCount, onNavigate }: ProductsMenuProps) {
+export default function ProductsMenu({
+  id,
+  categories,
+  productCount,
+  allCategoriesHref,
+  onAllCategories,
+  onNavigate,
+}: ProductsMenuProps) {
   return (
     <motion.div
       id={id}
@@ -36,11 +47,14 @@ export default function ProductsMenu({ id, categories, productCount, onNavigate 
             island-wide.
           </p>
           <Link
-            href="/catalog"
-            onClick={onNavigate}
+            href={allCategoriesHref}
+            onClick={(e) => {
+              onNavigate();
+              onAllCategories(e);
+            }}
             className="group mt-auto inline-flex w-fit items-center gap-2 pt-8 text-sm font-medium text-ink/80 transition-colors hover:text-accent"
           >
-            Browse all products
+            Browse all categories
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>

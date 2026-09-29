@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
-import { NAV_ITEMS, navHref } from "@/components/layout/navigation";
+import { NAV_ITEMS, navClick, navHref, scrollToSectionOnHome, sectionHref } from "@/components/layout/navigation";
 import { buttonClasses } from "@/components/ui/Button";
 import FacebookIcon from "@/components/ui/FacebookIcon";
 import InstagramIcon from "@/components/ui/InstagramIcon";
@@ -40,7 +40,12 @@ export default function MobileNav({ open, onClose, onHome, categories }: MobileN
     return () => mq.removeEventListener("change", onChange);
   }, [open, onClose]);
 
-  const links = NAV_ITEMS.map((item) => ({ key: item.key, label: item.label, href: navHref(item, onHome) }));
+  const links = NAV_ITEMS.map((item) => ({
+    key: item.key,
+    label: item.label,
+    href: navHref(item, onHome),
+    onClick: navClick(item, onHome),
+  }));
 
   return (
     <AnimatePresence>
@@ -127,11 +132,14 @@ export default function MobileNav({ open, onClose, onHome, categories }: MobileN
                               ))}
                               <li className="pb-3">
                                 <Link
-                                  href="/catalog"
-                                  onClick={onClose}
+                                  href={sectionHref("products", onHome)}
+                                  onClick={(e) => {
+                                    onClose();
+                                    scrollToSectionOnHome(e, "products", onHome);
+                                  }}
                                   className="block py-2.5 pl-1 text-base font-medium text-white transition-colors hover:text-white/80"
                                 >
-                                  Browse all products →
+                                  Browse all categories →
                                 </Link>
                               </li>
                             </motion.ul>
@@ -141,7 +149,10 @@ export default function MobileNav({ open, onClose, onHome, categories }: MobileN
                     ) : (
                       <Link
                         href={link.href}
-                        onClick={onClose}
+                        onClick={(e) => {
+                          onClose();
+                          link.onClick?.(e);
+                        }}
                         className="block border-b border-white/5 py-4 text-2xl font-semibold tracking-tight text-white/80 transition-colors hover:text-white"
                       >
                         {link.label}

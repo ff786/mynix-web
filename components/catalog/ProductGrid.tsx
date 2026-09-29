@@ -9,6 +9,7 @@ import ProductModal from "@/components/catalog/ProductModal";
 import Button from "@/components/ui/Button";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 import type { Product, ProductCategory } from "@/types/product";
+import { groupListings, optionsOf } from "@/utils/listings";
 import { getWhatsAppGeneralUrl } from "@/utils/whatsapp";
 
 type ProductGridProps = {
@@ -27,7 +28,7 @@ const normalise = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " 
 
 const searchText = (p: Product) =>
   normalise(
-    [p.name, p.categoryName, p.description, ...p.features].join(" "),
+    [p.name, p.categoryName, p.description, p.variant?.groupName, p.variant?.label, ...p.features].join(" "),
   );
 
 export default function ProductGrid({
@@ -69,13 +70,19 @@ export default function ProductGrid({
     () => products.filter((p) => terms.every((term) => (index.get(p.id) ?? "").includes(term))),
     [products, index, terms],
   );
+  // One card per listing: a variable product shows all its options when any of them matches.
+  const listings = useMemo(() => groupListings(products), [products]);
+  const matchedListings = useMemo(() => {
+    const matched = new Set(searched.map((p) => p.id));
+    return listings.filter((listing) => listing.products.some((p) => matched.has(p.id)));
+  }, [listings, searched]);
   const counts = useMemo(() => {
-    const result: Record<CategoryFilterValue, number> = { all: searched.length };
-    for (const p of searched) result[p.category] = (result[p.category] ?? 0) + 1;
+    const result: Record<CategoryFilterValue, number> = { all: matchedListings.length };
+    for (const { lead } of matchedListings) result[lead.category] = (result[lead.category] ?? 0) + 1;
     return result;
-  }, [searched]);
+  }, [matchedListings]);
 
-  const filtered = category === "all" ? searched : searched.filter((p) => p.category === category);
+  const filtered = category === "all" ? matchedListings : matchedListings.filter((l) => l.lead.category === category);
   const visible = limit ? filtered.slice(0, limit) : filtered;
   const hiddenCount = filtered.length - visible.length;
 
@@ -116,16 +123,16 @@ export default function ProductGrid({
       {filtered.length > 0 ? (
         <motion.ul layout className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout" initial={false}>
-            {visible.map((product, i) => (
+            {visible.map((listing, i) => (
               <motion.li
-                key={product.id}
+                key={listing.key}
                 layout
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
               >
-                <ProductCard product={product} onQuickView={setSelected} priority={i < 2 && !!product.image} />
+                <ProductCard listing={listing} onQuickView={setSelected} priority={i < 2 && !!listing.lead.image} />
               </motion.li>
             ))}
           </AnimatePresence>
@@ -156,7 +163,12 @@ export default function ProductGrid({
         </div>
       )}
 
-      <ProductModal product={selected} onClose={closeModal} />
+      <ProductModal
+        product={selected}
+        options={selected ? optionsOf(selected, products) : []}
+        onSelect={setSelected}
+        onClose={closeModal}
+      />
     </div>
   );
 }

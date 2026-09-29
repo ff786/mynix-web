@@ -25,14 +25,38 @@ export interface Product {
   /** First paragraph as plain text, for cards. */
   summary: string;
   features: string[];
-  /** Website URL of the photo; cards fall back to a category illustration. */
+  /** Website URL of the main photo; cards fall back to a category illustration. */
   image?: string;
+  /** Photos and videos in display order, including options' "All options" media. */
+  media: ProductMedia[];
   /** Text describing the photo (defaults to the name). */
   imageAlt?: string;
+  /** Set when this product is one option of a variable product (colour, size…). */
+  variant?: ProductVariant;
   flagship?: boolean;
 }
 
 /** A POS category that has products on the website. */
+/**
+ * One gallery item. Photos are served from this website (/media/products/…);
+ * uploaded videos from the public media storage; YouTube by video id.
+ */
+export type ProductMedia =
+  | { type: "image"; src: string; alt?: string; shared: boolean }
+  | { type: "video"; src: string; shared: boolean }
+  | { type: "youtube"; id: string; shared: boolean };
+
+export interface ProductVariant {
+  /** Opaque group key (never the POS id); options of one listing share it. */
+  group: string;
+  /** Listing name, e.g. "Gem Box 2x2". */
+  groupName: string;
+  /** What the options are, e.g. "Colour". */
+  optionName: string;
+  /** This product's option, e.g. "Black". */
+  label: string;
+}
+
 export interface ProductCategory {
   /** URL slug: /catalog?category={id}. */
   id: string;
