@@ -89,8 +89,8 @@ export default function FlagshipSpecs({ flagship }: { flagship: ProductRef }) {
             <ShoppingBag className="h-5 w-5" />
             Buy now
           </Button>
-          <Button href="#experience" variant="secondary" size="lg">
-            Replay the teardown
+          <Button href="#contact" variant="secondary" size="lg">
+            Ask For Support..
           </Button>
         </motion.div>
       </div>

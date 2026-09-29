@@ -82,7 +82,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
         ) : (
           <>
             <p className="mt-4 text-white/60">
-              Sign in or create an account with your mobile number — we&apos;ll text you a code. No password needed. Shop
+              Sign in or create an account with your mobile number we&apos;ll text you a code. No password needed. Shop
               customers: use the number you give us in store.
             </p>
             <div className="mt-10 max-w-lg">
