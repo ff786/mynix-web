@@ -13,11 +13,11 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * Landing-page sections that have their own clean URL (/products, /about,
- * /contact). Each of those routes renders the landing page scrolled to that
+ * Landing-page sections that have their own clean URL (/experience, /specs,
+ * /products, /about, /contact). Each of those routes renders the landing page scrolled to that
  * section, so they all count as "the landing page".
  */
-export const LANDING_SECTIONS = ["products", "about", "contact"] as const;
+export const LANDING_SECTIONS = ["experience", "specs", "products", "about", "contact"] as const;
 export type LandingSection = (typeof LANDING_SECTIONS)[number];
 
 export const isLandingPath = (pathname: string) =>

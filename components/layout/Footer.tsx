@@ -24,8 +24,8 @@ import {
 
 /** `section` links glide to their landing-page section (clean URL, e.g. /about). */
 const QUICK_LINKS: { label: string; href: string; section?: string }[] = [
-  { label: "Torch Showcase", href: "/#experience" },
-  { label: "Flagship Specs", href: "/#specs" },
+  { label: "Torch Showcase", href: "/experience", section: "experience" },
+  { label: "Flagship Specs", href: "/specs", section: "specs" },
   { label: "Products", href: "/products", section: "products" },
   { label: "About Us", href: "/about", section: "about" },
   { label: "Full Catalog", href: "/catalog" },

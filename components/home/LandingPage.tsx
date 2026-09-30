@@ -47,8 +47,8 @@ const WEBSITE_LD = {
 const jsonLd = (data: object) => JSON.stringify(data).replace(/</g, "\\u003c");
 
 /**
- * The one-page landing site. `/` renders it from the top; /products, /about
- * and /contact render the same page opened at that section.
+ * The one-page landing site. `/` renders it from the top; /experience,
+ * /specs, /products, /about and /contact render the same page opened at that section.
  */
 export default async function LandingPage({ section }: { section?: LandingSection }) {
   const { products, categories } = await getStorefront();
