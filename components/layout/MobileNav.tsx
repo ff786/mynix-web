@@ -43,7 +43,7 @@ export default function MobileNav({ open, onClose, onHome, categories }: MobileN
   const links = NAV_ITEMS.map((item) => ({
     key: item.key,
     label: item.label,
-    href: navHref(item, onHome),
+    href: navHref(item),
     onClick: navClick(item, onHome),
   }));
 
@@ -132,7 +132,7 @@ export default function MobileNav({ open, onClose, onHome, categories }: MobileN
                               ))}
                               <li className="pb-3">
                                 <Link
-                                  href={sectionHref("products", onHome)}
+                                  href={sectionHref("products")}
                                   onClick={(e) => {
                                     onClose();
                                     scrollToSectionOnHome(e, "products", onHome);

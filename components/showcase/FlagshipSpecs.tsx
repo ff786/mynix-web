@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { BatteryFull, Cpu, Focus, Power, Ruler, ShieldCheck, ShoppingBag, Target, Zap, type LucideIcon } from "lucide-react";
-import Button from "@/components/ui/Button";
+import SectionLink from "@/components/layout/SectionLink";
+import Button, { buttonClasses } from "@/components/ui/Button";
 import Eyebrow from "@/components/ui/text/Eyebrow";
 import Reveal from "@/components/ui/text/Reveal";
 import RevealText from "@/components/ui/text/RevealText";
@@ -89,9 +90,9 @@ export default function FlagshipSpecs({ flagship }: { flagship: ProductRef }) {
             <ShoppingBag className="h-5 w-5" />
             Buy now
           </Button>
-          <Button href="#contact" variant="secondary" size="lg">
+          <SectionLink section="contact" className={buttonClasses({ variant: "secondary", size: "lg" })}>
             Ask For Support..
-          </Button>
+          </SectionLink>
         </motion.div>
       </div>
     </section>

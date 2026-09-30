@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { isLandingPath } from "@/components/layout/navigation";
 
 /**
  * Drives the page background and fixed-chrome themes below the hero.
@@ -39,7 +40,10 @@ const mix = (a: RGB, b: RGB, t: number): RGB => [
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 export default function SectionThemeController() {
+  // /about, /contact etc. are the landing page too: moving between them only
+  // swaps the address (see scrollToSectionOnHome), so don't reset the theme.
   const pathname = usePathname();
+  const page = isLandingPath(pathname) ? "/" : pathname;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -86,7 +90,7 @@ export default function SectionThemeController() {
       delete root.dataset.navTheme;
       delete root.dataset.badgeTheme;
     };
-  }, [pathname]);
+  }, [page]);
 
   return null;
 }

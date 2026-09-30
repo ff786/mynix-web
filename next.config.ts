@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // The home page lives at /; /home is an alias for it.
+  async redirects() {
+    return [{ source: "/home", destination: "/", permanent: true }];
+  },
 };
 
 export default nextConfig;

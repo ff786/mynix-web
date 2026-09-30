@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
+import SectionLink from "@/components/layout/SectionLink";
 import CookieSettingsButton from "@/components/consent/CookieSettingsButton";
 import { buttonClasses } from "@/components/ui/Button";
 import NewsletterForm from "@/components/newsletter/NewsletterForm";
@@ -21,11 +22,12 @@ import {
   getWhatsAppGeneralUrl,
 } from "@/utils/whatsapp";
 
-const QUICK_LINKS = [
+/** `section` links glide to their landing-page section (clean URL, e.g. /about). */
+const QUICK_LINKS: { label: string; href: string; section?: string }[] = [
   { label: "Torch Showcase", href: "/#experience" },
   { label: "Flagship Specs", href: "/#specs" },
-  { label: "Products", href: "/#products" },
-  { label: "About Us", href: "/#about" },
+  { label: "Products", href: "/products", section: "products" },
+  { label: "About Us", href: "/about", section: "about" },
   { label: "Full Catalog", href: "/catalog" },
 ];
 
@@ -85,9 +87,15 @@ export default function Footer() {
           <FooterColumn title="Quick Links">
             {QUICK_LINKS.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="text-sm text-ink/60 transition-colors hover:text-ink">
-                  {link.label}
-                </Link>
+                {link.section ? (
+                  <SectionLink section={link.section} className="text-sm text-ink/60 transition-colors hover:text-ink">
+                    {link.label}
+                  </SectionLink>
+                ) : (
+                  <Link href={link.href} className="text-sm text-ink/60 transition-colors hover:text-ink">
+                    {link.label}
+                  </Link>
+                )}
               </li>
             ))}
           </FooterColumn>

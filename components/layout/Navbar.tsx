@@ -11,6 +11,7 @@ import MobileNav from "@/components/layout/MobileNav";
 import ProductsMenu from "@/components/layout/ProductsMenu";
 import {
   NAV_ITEMS,
+  isLandingPath,
   navClick,
   navHref,
   scrollToSectionOnHome,
@@ -32,7 +33,7 @@ type NavbarProps = {
 };
 
 export default function Navbar({ categories, productCount }: NavbarProps) {
-  const onHome = usePathname() === "/";
+  const onHome = isLandingPath(usePathname());
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -115,7 +116,7 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
                   className="flex items-center gap-1"
                 >
                   <Link
-                    href={navHref(item, onHome)}
+                    href={navHref(item)}
                     onClick={(e) => {
                       closeProducts();
                       navClick(item, onHome)?.(e);
@@ -146,7 +147,7 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
                   className="flex items-center"
                 >
                   <Link
-                    href={navHref(item, onHome)}
+                    href={navHref(item)}
                     onClick={navClick(item, onHome)}
                     className={navLinkClass}
                   >
@@ -186,7 +187,7 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
               id={PRODUCTS_MENU_ID}
               categories={categories}
               productCount={productCount}
-              allCategoriesHref={sectionHref("products", onHome)}
+              allCategoriesHref={sectionHref("products")}
               onNavigate={closeProducts}
               onAllCategories={(e) => scrollToSectionOnHome(e, "products", onHome)}
             />

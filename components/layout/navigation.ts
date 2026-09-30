@@ -12,15 +12,26 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "contact", label: "Contact", section: "contact" },
 ];
 
-/** Anchor on the landing page itself, or a link back to it from other routes. */
-export const sectionHref = (id: string, onHome: boolean) => (onHome ? `#${id}` : `/#${id}`);
+/**
+ * Landing-page sections that have their own clean URL (/products, /about,
+ * /contact). Each of those routes renders the landing page scrolled to that
+ * section, so they all count as "the landing page".
+ */
+export const LANDING_SECTIONS = ["products", "about", "contact"] as const;
+export type LandingSection = (typeof LANDING_SECTIONS)[number];
 
-export const navHref = (item: NavItem, onHome: boolean) =>
-  item.route ?? (item.section === "top" && !onHome ? "/" : sectionHref(item.section, onHome));
+export const isLandingPath = (pathname: string) =>
+  pathname === "/" || LANDING_SECTIONS.some((section) => pathname === `/${section}`);
+
+/** A section's own URL, e.g. /about. */
+export const sectionHref = (id: string) => `/${id}`;
+
+export const navHref = (item: NavItem) =>
+  item.route ?? (item.section === "top" ? "/" : sectionHref(item.section));
 
 /**
- * Logo / Home on the landing page: a smooth scroll to the very top (clearing
- * any #section from the address). Elsewhere the link simply goes home.
+ * Logo / Home on the landing page: a smooth scroll to the very top (resetting
+ * the address to /). Elsewhere the link simply goes home.
  */
 export function scrollToTopOnHome(event: { preventDefault: () => void }, onHome: boolean) {
   if (!onHome) return;
@@ -30,14 +41,15 @@ export function scrollToTopOnHome(event: { preventDefault: () => void }, onHome:
 }
 
 /**
- * A landing-page section link (e.g. Products): on the landing page, scroll to
- * it explicitly, since the router skips a hash it thinks is already current.
+ * A landing-page section link (e.g. About Us): already on the landing page,
+ * glide to the section and swap the address to its clean URL, instead of
+ * reloading the page. Elsewhere the link navigates to that URL as usual.
  */
 export function scrollToSectionOnHome(event: { preventDefault: () => void }, id: string, onHome: boolean) {
   const section = onHome ? document.getElementById(id) : null;
   if (!section) return;
   event.preventDefault();
-  window.history.replaceState(window.history.state, "", `/#${id}`);
+  window.history.replaceState(window.history.state, "", sectionHref(id));
   section.scrollIntoView({ behavior: "smooth" });
 }
 
