@@ -41,6 +41,17 @@ const ORGANIZATION_LD = {
   sameAs: [INSTAGRAM_URL, FACEBOOK_URL],
 };
 
+/** Tells Google the site's name ("MYNIX") for brand searches and the result's site-name line. */
+const WEBSITE_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  alternateName: ["MYNIX (PVT) LTD", "Mynix Gemology", "mynix.lk"],
+  url: `${SITE_URL}/`,
+};
+
+const jsonLd = (data: object) => JSON.stringify(data).replace(/</g, "\\u003c");
+
 export default async function Home() {
   const { products, categories } = await getStorefront();
   const flagship = products.find((p) => p.flagship);
@@ -50,7 +61,11 @@ export default async function Home() {
     <main>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_LD).replace(/</g, "\\u003c") }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(WEBSITE_LD) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(ORGANIZATION_LD) }}
       />
       <MynixTorchViewer flagship={flagshipRef} />
 

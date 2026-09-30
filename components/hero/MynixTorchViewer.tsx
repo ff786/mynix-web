@@ -27,6 +27,8 @@ const FRAME_ASPECT = 1920 / 1080;
 // Scroll → frame timeline. The footage stays on a white studio backdrop until
 // ~frame 147, plunges into the dark void by frame 168, then holds on the
 // labelled engineering view. The plunge is timed to land between Beat C and D.
+// A monotone cubic runs through these keys, so the playback speed changes
+// smoothly (no sudden stop after the plunge) while still hitting every key.
 const SCROLL_KEYS = [0, 0.68, 0.76, 0.9, 1];
 const FRAME_KEYS = [0, 147, 168, FRAME_COUNT - 1, FRAME_COUNT - 1];
 
@@ -41,7 +43,8 @@ const INK_STOPS = [0, 0.35, 0.65, 1];
 const HEADING_COLORS = ["#0f172a", "#0f172a", "rgba(255,255,255,0.9)", "rgba(255,255,255,0.9)"];
 const BODY_COLORS = ["#475569", "#475569", "rgba(255,255,255,0.6)", "rgba(255,255,255,0.6)"];
 
-const SPRING = { stiffness: 100, damping: 30, restDelta: 0.001 };
+// Critically damped: follows the scroll closely and settles without a slow tail.
+const SPRING = { stiffness: 240, damping: 32, mass: 1, restDelta: 0.0005 };
 
 const toCss = ([r, g, b]: RGB) => `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
 const mix = (a: RGB, b: RGB, t: number): RGB => [
@@ -51,15 +54,78 @@ const mix = (a: RGB, b: RGB, t: number): RGB => [
 ];
 const luminance = ([r, g, b]: RGB) => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 
+/** Fritsch–Carlson monotone cubic through (xs, ys): smooth, never overshoots. */
+function monotoneCubic(xs: number[], ys: number[]): (x: number) => number {
+  const n = xs.length;
+  const d = xs.slice(0, -1).map((x, i) => (ys[i + 1] - ys[i]) / (xs[i + 1] - x));
+  const m = xs.map((_, i) =>
+    i === 0 ? d[0] : i === n - 1 ? d[n - 2] : d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2,
+  );
+  for (let i = 0; i < n - 1; i++) {
+    if (d[i] === 0) {
+      m[i] = m[i + 1] = 0;
+      continue;
+    }
+    const a = m[i] / d[i];
+    const b = m[i + 1] / d[i];
+    const s = a * a + b * b;
+    if (s > 9) {
+      const t = 3 / Math.sqrt(s);
+      m[i] = t * a * d[i];
+      m[i + 1] = t * b * d[i];
+    }
+  }
+  return (x) => {
+    if (x <= xs[0]) return ys[0];
+    if (x >= xs[n - 1]) return ys[n - 1];
+    let i = 0;
+    while (x > xs[i + 1]) i++;
+    const h = xs[i + 1] - xs[i];
+    const t = (x - xs[i]) / h;
+    const t2 = t * t;
+    const t3 = t2 * t;
+    return (
+      (2 * t3 - 3 * t2 + 1) * ys[i] +
+      (t3 - 2 * t2 + t) * h * m[i] +
+      (-2 * t3 + 3 * t2) * ys[i + 1] +
+      (t3 - t2) * h * m[i + 1]
+    );
+  };
+}
+
+const frameAt = monotoneCubic(SCROLL_KEYS, FRAME_KEYS);
+
 /* -------------------------------------------------------------------------- */
-/*  Frame preloading                                                           */
+/*  Frame loading & decoding                                                   */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Frame 0 first, then every 8th frame (so scrubbing looks right early), then the
+ * rest. Only frame 0 gates the hero; the others stream in a few at a time.
+ */
+function loadOrder(count: number): number[] {
+  const order = [0];
+  for (let i = 8; i < count; i += 8) order.push(i);
+  if (!order.includes(count - 1)) order.push(count - 1);
+  for (let i = 1; i < count; i++) if (!order.includes(i)) order.push(i);
+  return order;
+}
+
+const FETCH_CONCURRENCY = 4;
+// Decoded frames kept around the playhead. 174 full-HD frames (~1.4 GB decoded)
+// overflow the browser's image cache, which then re-decodes JPEGs on the main
+// thread mid-scroll — the "stuck" hitches. Instead a small window is decoded off
+// the main thread (createImageBitmap) ahead of the scroll direction.
+const DECODE_AHEAD = 10;
+const DECODE_BEHIND = 4;
+const KEEP_RADIUS = 14;
+const MAX_IN_FLIGHT = 6;
+
 /** Average colour of the four corners — the studio backdrop of the frame. */
-function sampleBackdrop(img: HTMLImageElement, ctx: CanvasRenderingContext2D): RGB {
+function sampleBackdrop(bitmap: ImageBitmap, ctx: CanvasRenderingContext2D): RGB {
   const { width, height } = ctx.canvas;
   ctx.clearRect(0, 0, width, height);
-  ctx.drawImage(img, 0, 0, width, height);
+  ctx.drawImage(bitmap, 0, 0, width, height);
   const { data } = ctx.getImageData(0, 0, width, height);
   const corners = [0, width - 1, (height - 1) * width, height * width - 1];
   const sum: RGB = [0, 0, 0];
@@ -71,23 +137,28 @@ function sampleBackdrop(img: HTMLImageElement, ctx: CanvasRenderingContext2D): R
   return [sum[0] / 4, sum[1] / 4, sum[2] / 4];
 }
 
-/**
- * Frame 0 first, then every 8th frame (so scrubbing looks right early), then the
- * rest. Only frame 0 gates the hero; the others stream in a few at a time so
- * decoding never floods the main thread.
- */
-function loadOrder(count: number): number[] {
-  const order = [0];
-  for (let i = 8; i < count; i += 8) order.push(i);
-  if (!order.includes(count - 1)) order.push(count - 1);
-  for (let i = 1; i < count; i++) if (!order.includes(i)) order.push(i);
-  return order;
+/** Off-main-thread decode, resized to what the canvas actually shows. */
+async function decode(blob: Blob, width?: number, height?: number): Promise<ImageBitmap> {
+  if (!width || !height) return createImageBitmap(blob);
+  try {
+    return await createImageBitmap(blob, { resizeWidth: width, resizeHeight: height, resizeQuality: "high" });
+  } catch {
+    return createImageBitmap(blob); // Browsers without resize options.
+  }
 }
 
-const CONCURRENCY = 4;
+type FrameStore = {
+  /** Decoded frame, or the nearest decoded one (or null before any are ready). */
+  nearest: (index: number) => { index: number; bitmap: ImageBitmap } | null;
+  get: (index: number) => ImageBitmap | undefined;
+  /** Move the decode window to the playhead. */
+  focus: (index: number) => void;
+  /** Decode at this pixel size (the canvas backing store). */
+  setSize: (width: number, height: number) => void;
+};
 
-function useFramePreloader(count: number, onFrame: () => void) {
-  const imagesRef = useRef<HTMLImageElement[]>([]);
+function useFrames(count: number, onFrame: () => void) {
+  const storeRef = useRef<FrameStore | null>(null);
   const backdropsRef = useRef<(RGB | null)[]>([]);
   const onFrameRef = useRef(onFrame);
   const [progress, setProgress] = useState(0);
@@ -99,6 +170,7 @@ function useFramePreloader(count: number, onFrame: () => void) {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     const sampler = document.createElement("canvas");
     sampler.width = 32;
@@ -107,58 +179,146 @@ function useFramePreloader(count: number, onFrame: () => void) {
     const backdrops: (RGB | null)[] = Array.from({ length: count }, () => null);
     backdropsRef.current = backdrops;
 
-    const images = Array.from({ length: count }, () => {
-      const img = new Image();
-      img.decoding = "async";
-      return img;
-    });
-    imagesRef.current = images;
+    const blobs: (Blob | null)[] = Array.from({ length: count }, () => null);
+    // Each frame remembers the decode size (generation) it was made at.
+    const bitmaps = new Map<number, { bitmap: ImageBitmap; generation: number }>();
+    const inFlight = new Set<number>();
+    let center = 0;
+    let direction = 1;
+    let size = null as { width: number; height: number } | null; // set by setSize()
+    let generation = 0; // bumps when the decode size changes
+
+    const wanted = (i: number) => Math.abs(i - center) <= KEEP_RADIUS;
+
+    const request = (i: number) => {
+      const blob = blobs[i];
+      if (!blob || bitmaps.get(i)?.generation === generation || inFlight.has(i)) return;
+      inFlight.add(i);
+      const gen = generation;
+      decode(blob, size?.width, size?.height)
+        .then((bitmap) => {
+          inFlight.delete(i);
+          if (cancelled || gen !== generation || !wanted(i)) return bitmap.close();
+          // Swap in place: the previous (other-size) bitmap stays drawable until now.
+          bitmaps.get(i)?.bitmap.close();
+          bitmaps.set(i, { bitmap, generation: gen });
+          onFrameRef.current();
+          pump();
+        })
+        .catch(() => {
+          inFlight.delete(i);
+        });
+    };
+
+    /** Evict far frames, then decode the nearest missing ones, ahead first. */
+    const pump = () => {
+      if (cancelled) return;
+      for (const [i, entry] of bitmaps) {
+        if (!wanted(i)) {
+          entry.bitmap.close();
+          bitmaps.delete(i);
+        }
+      }
+      const ahead = direction >= 0 ? DECODE_AHEAD : DECODE_BEHIND;
+      const behind = direction >= 0 ? DECODE_BEHIND : DECODE_AHEAD;
+      for (let step = 0; step <= Math.max(ahead, behind); step++) {
+        if (inFlight.size >= MAX_IN_FLIGHT) return;
+        const forward = center + step * (direction >= 0 ? 1 : -1);
+        const backward = center - step * (direction >= 0 ? 1 : -1);
+        if (step <= ahead && forward >= 0 && forward < count) request(forward);
+        if (step > 0 && step <= behind && backward >= 0 && backward < count) request(backward);
+      }
+    };
+
+    storeRef.current = {
+      get: (i) => bitmaps.get(i)?.bitmap,
+      nearest: (i) => {
+        for (let offset = 0; offset <= KEEP_RADIUS; offset++) {
+          const below = bitmaps.get(i - offset);
+          if (below) return { index: i - offset, bitmap: below.bitmap };
+          const above = bitmaps.get(i + offset);
+          if (above) return { index: i + offset, bitmap: above.bitmap };
+        }
+        return null;
+      },
+      focus: (i) => {
+        if (i === center) return;
+        direction = i > center ? 1 : -1;
+        center = i;
+        pump();
+      },
+      setSize: (width, height) => {
+        const previous = size;
+        size = { width, height };
+        // Re-decode only on a real change (not every pixel of a window drag);
+        // current bitmaps keep drawing, scaled, until their replacements land.
+        if (previous && Math.abs(width - previous.width) / previous.width < 0.2) return;
+        generation++;
+        pump();
+      },
+    };
 
     const queue = loadOrder(count);
-    const load = (i: number) =>
-      new Promise<void>((resolve) => {
-        const img = images[i];
-        const done = () => {
-          if (cancelled) return resolve();
-          if (samplerCtx && img.naturalWidth > 0) backdrops[i] = sampleBackdrop(img, samplerCtx);
-          if (i === 0) {
-            setProgress(1);
-            setReady(true);
-          }
-          onFrameRef.current();
-          resolve();
-        };
-        // Decode up front so the first draw of each frame never janks.
-        img.onload = () => {
-          img.decode().catch(() => undefined).finally(done);
-        };
-        img.onerror = done;
-        img.src = frameSrc(i);
-      });
+    const load = async (i: number) => {
+      try {
+        const response = await fetch(frameSrc(i), {
+          signal: controller.signal,
+          priority: i === 0 ? "high" : "auto",
+        } as RequestInit);
+        if (!response.ok) throw new Error(String(response.status));
+        const blob = await response.blob();
+        if (cancelled) return;
+        blobs[i] = blob;
+        if (samplerCtx) {
+          const thumb = await decode(blob, sampler.width, sampler.height);
+          if (!cancelled) backdrops[i] = sampleBackdrop(thumb, samplerCtx);
+          thumb.close();
+        }
+        if (!cancelled && wanted(i)) request(i);
+      } catch {
+        // A missing frame falls back to its nearest neighbour when drawn.
+      }
+      if (!cancelled) onFrameRef.current();
+    };
 
     const worker = async () => {
       while (!cancelled && queue.length > 0) await load(queue.shift()!);
     };
-    // Frame 0 alone, then the rest in parallel lanes.
-    load(queue.shift()!).then(() => {
-      for (let lane = 0; lane < CONCURRENCY; lane++) void worker();
-    });
+    // Frame 0 alone (decoded before the hero shows), then the rest in parallel lanes.
+    const first = queue.shift()!;
+    (async () => {
+      try {
+        const response = await fetch(frameSrc(first), { signal: controller.signal });
+        if (!response.ok) throw new Error(String(response.status));
+        const blob = await response.blob();
+        blobs[first] = blob;
+        const bitmap = await decode(blob, size?.width, size?.height);
+        if (cancelled) return bitmap.close();
+        bitmaps.set(first, { bitmap, generation });
+        if (samplerCtx) backdrops[first] = sampleBackdrop(bitmap, samplerCtx);
+      } catch {
+        // Show the hero anyway; later frames fill in.
+      }
+      if (cancelled) return;
+      setProgress(1);
+      setReady(true);
+      onFrameRef.current();
+      for (let lane = 0; lane < FETCH_CONCURRENCY; lane++) void worker();
+    })();
 
     return () => {
       cancelled = true;
+      controller.abort();
       queue.length = 0;
-      for (const img of images) {
-        img.onload = null;
-        img.onerror = null;
-        img.src = "";
-      }
-      imagesRef.current = [];
+      for (const { bitmap } of bitmaps.values()) bitmap.close();
+      bitmaps.clear();
+      storeRef.current = null;
       sampler.width = 0;
       sampler.height = 0;
     };
   }, [count]);
 
-  return { imagesRef, backdropsRef, progress, ready };
+  return { storeRef, backdropsRef, progress, ready };
 }
 
 /** Backdrop of the nearest loaded frame (white until any have loaded). */
@@ -170,9 +330,6 @@ function nearestBackdrop(backdrops: (RGB | null)[], index: number): RGB {
   return WHITE;
 }
 
-const isDrawable = (img: HTMLImageElement | undefined): img is HTMLImageElement =>
-  !!img && img.complete && img.naturalWidth > 0;
-
 /* -------------------------------------------------------------------------- */
 /*  Viewer                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -183,12 +340,13 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const rafRef = useRef<number | null>(null);
+  // Fractional frame position — the canvas blends between neighbouring frames.
   const currentFrameRef = useRef(0);
 
-  // Redraw as frames stream in, so a placeholder frame is swapped for the real one.
+  // Redraw as frames are decoded, so a placeholder frame is swapped for the real one.
   const redrawRef = useRef<() => void>(() => undefined);
   const onFrame = useCallback(() => redrawRef.current(), []);
-  const { imagesRef, backdropsRef, progress, ready } = useFramePreloader(FRAME_COUNT, onFrame);
+  const { storeRef, backdropsRef, progress, ready } = useFrames(FRAME_COUNT, onFrame);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -206,25 +364,31 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
   /* ----------------------------- Canvas drawing ---------------------------- */
 
   const draw = useCallback(
-    (index: number) => {
+    (frame: number) => {
       const canvas = canvasRef.current;
       const ctx = ctxRef.current;
-      const images = imagesRef.current;
-      if (!canvas || !ctx || images.length === 0) return;
+      const store = storeRef.current;
+      if (!canvas || !ctx || !store) return;
 
-      // Fall back to the nearest decoded frame if this one failed to load.
-      let img: HTMLImageElement | undefined;
-      for (let offset = 0; !img && offset < images.length; offset++) {
-        if (isDrawable(images[index - offset])) img = images[index - offset];
-        else if (isDrawable(images[index + offset])) img = images[index + offset];
+      const lo = Math.floor(frame);
+      const t = frame - lo;
+      // Nothing decoded near here yet: keep the last good frame on screen.
+      const base = store.nearest(lo);
+      if (!base) return;
+
+      // Frames are opaque and the canvas matches their aspect, so no clear needed.
+      ctx.globalAlpha = 1;
+      ctx.drawImage(base.bitmap, 0, 0, canvas.width, canvas.height);
+
+      // Cross-fade into the next frame so motion is continuous between frames.
+      const next = base.index === lo && t > 0.01 ? store.get(lo + 1) : undefined;
+      if (next) {
+        ctx.globalAlpha = t;
+        ctx.drawImage(next, 0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
       }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (!img) return;
-
-      // The canvas itself is already sized to the frame's aspect ratio.
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     },
-    [imagesRef],
+    [storeRef],
   );
 
   const scheduleDraw = useCallback(() => {
@@ -242,10 +406,12 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
   /** Sync frame, background and ink to a (smoothed) scroll progress. */
   const apply = useCallback(
     (p: number) => {
-      const f = transform(p, SCROLL_KEYS, FRAME_KEYS);
-      const index = Math.min(FRAME_COUNT - 1, Math.max(0, Math.round(f)));
-      if (index !== currentFrameRef.current) {
-        currentFrameRef.current = index;
+      const f = frameAt(p);
+      // 1/32-frame steps: smooth blending without redrawing for invisible changes.
+      const frame = Math.round(f * 32) / 32;
+      if (frame !== currentFrameRef.current) {
+        currentFrameRef.current = frame;
+        storeRef.current?.focus(Math.round(f));
         scheduleDraw();
       }
 
@@ -263,18 +429,25 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
       darkness.set(1 - luminance(bg));
 
       // Once the hero has scrolled away, SectionThemeController owns the page
-      // (the spring may still be settling after a long jump).
+      // (the spring may still be settling after a long jump). Layout is only
+      // read at the very end of the hero, never on ordinary scroll frames.
       const container = containerRef.current;
-      if (container && container.getBoundingClientRect().bottom < window.innerHeight - 1) return;
+      if (
+        container &&
+        scrollYProgress.get() >= 1 &&
+        container.getBoundingClientRect().bottom < window.innerHeight - 1
+      )
+        return;
 
+      // --page-bg is on :root, so every write restyles the page — skip no-ops.
       const root = document.documentElement;
-      root.style.setProperty("--page-bg", css);
+      if (root.style.getPropertyValue("--page-bg") !== css) root.style.setProperty("--page-bg", css);
       // Fixed chrome (navbar, WhatsApp badge) matches the page: light over white frames.
       const theme = luminance(bg) > 0.5 ? "light" : "dark";
       if (root.dataset.navTheme !== theme) root.dataset.navTheme = theme;
       if (root.dataset.badgeTheme !== theme) root.dataset.badgeTheme = theme;
     },
-    [backdropsRef, backgroundColor, darkness, scheduleDraw],
+    [backdropsRef, backgroundColor, darkness, scheduleDraw, scrollYProgress, storeRef],
   );
 
   useMotionValueEvent(smooth, "change", apply);
@@ -301,6 +474,9 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
       canvas.height = Math.round(height * dpr);
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
+      // Decode frames at the size they're shown (never above the 1920px source).
+      const decodeWidth = Math.min(canvas.width, 1920);
+      storeRef.current?.setSize(decodeWidth, Math.round(decodeWidth / FRAME_ASPECT));
       draw(currentFrameRef.current);
     };
 
@@ -318,7 +494,7 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
       canvas.height = 0;
       ctxRef.current = null;
     };
-  }, [draw]);
+  }, [draw, storeRef]);
 
   // First paint once frame 0 is in (also covers restored scroll positions).
   useEffect(() => {
