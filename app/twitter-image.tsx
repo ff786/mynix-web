@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 /** Social preview (WhatsApp, Facebook, X, LinkedIn…) for every page. */
@@ -5,7 +7,10 @@ export const alt = "MYNIX — Professional Gemology Tools & Equipment";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+  // The official gold mark (transparent), 480×253.
+  const mark = await readFile(join(process.cwd(), "public/mynix-mark.png"), "base64");
+
   return new ImageResponse(
     (
       <div
@@ -20,7 +25,10 @@ export default function OpengraphImage() {
           color: "#ffffff",
         }}
       >
-        <div style={{ display: "flex", fontSize: 30, fontWeight: 700, letterSpacing: "0.45em" }}>MYNIX</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          <img src={`data:image/png;base64,${mark}`} width={152} height={80} alt="" />
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 700, letterSpacing: "0.45em" }}>MYNIX</div>
+        </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", fontSize: 22, letterSpacing: "0.3em", color: "#9fb0cf", marginBottom: 24 }}>
             GEMOLOGICAL TOOLS &amp; EQUIPMENT

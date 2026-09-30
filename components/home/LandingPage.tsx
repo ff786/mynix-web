@@ -21,7 +21,7 @@ const ORGANIZATION_LD = {
   name: "MYNIX (PVT) LTD",
   alternateName: SITE_NAME,
   url: SITE_URL,
-  logo: `${SITE_URL}/apple-icon`,
+  logo: `${SITE_URL}/mynix-logo.png`,
   image: `${SITE_URL}/opengraph-image`,
   description: SITE_DESCRIPTION,
   email: CONTACT_EMAIL,
