@@ -8,6 +8,7 @@ import { ArrowRight, ChevronDown, Menu } from "lucide-react";
 import AccountButton from "@/components/cart/AccountButton";
 import CartButton from "@/components/cart/CartButton";
 import MobileNav from "@/components/layout/MobileNav";
+import BrandLogo from "@/components/ui/BrandLogo";
 import ProductsMenu from "@/components/layout/ProductsMenu";
 import {
   NAV_ITEMS,
@@ -100,9 +101,10 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
           <Link
             href="/"
             onClick={(e) => scrollToTopOnHome(e, onHome)}
-            className="text-[15px] font-semibold uppercase tracking-[0.42em]"
+            aria-label="MYNIX home"
+            className="-m-1.5 rounded-lg p-1.5 transition-opacity duration-300 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            Mynix
+            <BrandLogo priority />
           </Link>
 
           <ul className="hidden items-center gap-9 lg:flex">

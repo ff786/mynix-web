@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
 import { NAV_ITEMS, navClick, navHref, scrollToSectionOnHome, sectionHref } from "@/components/layout/navigation";
+import BrandLogo from "@/components/ui/BrandLogo";
 import { buttonClasses } from "@/components/ui/Button";
 import FacebookIcon from "@/components/ui/FacebookIcon";
 import InstagramIcon from "@/components/ui/InstagramIcon";
@@ -73,7 +74,7 @@ export default function MobileNav({ open, onClose, onHome, categories }: MobileN
             className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-[#050505] px-6 pb-10 pt-5 text-white outline-none"
           >
             <div className="flex h-[52px] items-center justify-between">
-              <span className="text-[15px] font-semibold uppercase tracking-[0.42em]">Mynix</span>
+              <BrandLogo />
               <button
                 type="button"
                 onClick={onClose}
