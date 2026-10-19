@@ -56,7 +56,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
 
   if (!available) {
     return (
-      <main data-theme="dark" data-section-bg="#050505" className="min-h-screen px-6 pb-24 pt-36 sm:px-10 sm:pt-44">
+      <main data-theme="dark" data-section-bg="#050505" className="min-h-dvh px-6 pb-24 pt-36 sm:px-10 sm:pt-44">
         <div className="mx-auto max-w-3xl">
           <StoreUnavailable />
         </div>
@@ -110,7 +110,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   ];
 
   return (
-    <main data-theme="dark" data-section-bg="#050505" className="min-h-screen px-6 pb-24 pt-32 sm:px-10 sm:pt-40">
+    <main data-theme="dark" data-section-bg="#050505" className="min-h-dvh px-6 pb-24 pt-32 sm:px-10 sm:pt-40">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}

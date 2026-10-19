@@ -5,9 +5,7 @@ import { motion, useReducedMotion, useTransform, type MotionValue } from "framer
 import { ArrowRight } from "lucide-react";
 import { buttonClasses } from "@/components/ui/Button";
 import { EASE_OUT, WordMask } from "@/components/ui/text/RevealText";
-import type { ProductRef } from "@/types/product";
 import { cn } from "@/utils/cn";
-import { flagshipHref } from "@/utils/links";
 
 // All timings are fractions of total hero scroll.
 const FADE = 0.05; // beat container fade
@@ -22,19 +20,17 @@ type ScrollyBeatsProps = {
   bodyColor: MotionValue<string>;
   /** True once the loader has cleared — plays Beat A's intro. */
   ready: boolean;
-  /** Product behind Beat D's "Order the kit". */
-  flagship: ProductRef;
 };
 
 /** Text overlays for Beats A–D, positioned where the footage leaves empty space. */
-export default function ScrollyBeats({ progress, headingColor, bodyColor, ready, flagship }: ScrollyBeatsProps) {
+export default function ScrollyBeats({ progress, headingColor, bodyColor, ready }: ScrollyBeatsProps) {
   const indicatorOpacity = useTransform(progress, [0, 0.1], [1, 0]);
   const shared = { progress, ready };
 
   return (
     <>
       {/* Beat A — hero */}
-      <Beat {...shared} range={[0, 0.2]} holdStart className="top-[13vh]">
+      <Beat {...shared} range={[0, 0.2]} holdStart className="top-[13svh]">
         {/* The MYNIX motto. The torch is contain-fit, so it scales with the smaller of
             width and height; sizing the headline the same way keeps it clear of the torch. */}
         <Stagger order={0}>
@@ -44,48 +40,48 @@ export default function ScrollyBeats({ progress, headingColor, bodyColor, ready,
           as="h1"
           color={headingColor}
           lines={["Unleash your", "passion with", "precision"]}
-          size="text-[length:clamp(2.5rem,min(4.2vw,7.4vh),6rem)]"
+          size="text-[length:clamp(2.5rem,min(4.2vw,7.4svh),6rem)]"
         />
       </Beat>
 
       {/* Beat B */}
-      <Beat {...shared} range={[0.25, 0.45]} className="bottom-[9vh]">
+      <Beat {...shared} range={[0.25, 0.45]} className="bottom-[9svh]">
         <Stagger order={0}>
-          <Eyebrow color={bodyColor}>The Engineering</Eyebrow>
+          <Eyebrow color={bodyColor}>Who We Equip</Eyebrow>
         </Stagger>
-        <Heading color={headingColor} lines={["Surface & Measure"]} />
+        <Heading color={headingColor} lines={["Built For The Trade"]} />
         <Stagger order={1}>
           <Body color={bodyColor}>
-            Anodized aluminum chassis featuring laser-etched precision ruler markings and a brushed
-            stainless steel 5mm interchangeable nozzle.
+            Gemologists, traders and appraisers rely on MYNIX for instruments chosen for accuracy
+            and built to last.
           </Body>
         </Stagger>
       </Beat>
 
       {/* Beat C */}
-      <Beat {...shared} range={[0.5, 0.7]} className="top-[13vh]">
+      <Beat {...shared} range={[0.5, 0.7]} className="top-[13svh]">
         <Stagger order={0}>
-          <Eyebrow color={bodyColor}>Optical Performance</Eyebrow>
+          <Eyebrow color={bodyColor}>The Collection</Eyebrow>
         </Stagger>
-        <Heading color={headingColor} lines={["Pure Optical", "Power"]} />
+        <Heading color={headingColor} lines={["Every Tool,", "One Place"]} />
         <Stagger order={1}>
           <Body color={bodyColor}>
-            High-output UV LED emitter module paired with a precision glass focusing lens and micro-PCB
-            driver circuit board.
+            Cutting, weighing, inspection, handling and presentation. The full range of gemology
+            tools and equipment, in one place.
           </Body>
         </Stagger>
       </Beat>
 
       {/* Beat D — CTA */}
-      <Beat {...shared} range={[0.76, 1]} holdEnd className="top-[11vh]">
+      <Beat {...shared} range={[0.76, 1]} holdEnd className="top-[11svh]">
         <Heading color={headingColor} lines={["Mynix", "Gemology"]} />
         <Stagger order={1}>
           <Body color={bodyColor} className="max-w-xs">
-            Engineered for uncompromising accuracy. Order the professional appraisal kit now.
+            Engineered for uncompromising accuracy. Explore the full range of professional gemology tools.
           </Body>
         </Stagger>
         <Stagger order={2}>
-          <CtaButton progress={progress} start={0.76} flagship={flagship} />
+          <CtaButton progress={progress} start={0.76} />
         </Stagger>
       </Beat>
 
@@ -93,7 +89,7 @@ export default function ScrollyBeats({ progress, headingColor, bodyColor, ready,
         className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: ready ? 1 : 0 }}
-        transition={{ duration: 1, delay: 1.4 }}
+        transition={{ duration: 0.6, delay: 0.5 }}
       >
         <ScrollIndicator opacity={indicatorOpacity} />
       </motion.div>
@@ -227,7 +223,7 @@ function Char({ char, index, count }: { char: string; index: number; count: numb
           className="inline-block"
           initial={reduce ? false : { y: "110%" }}
           animate={ready ? { y: "0%" } : undefined}
-          transition={{ duration: 1.1, ease: EASE_OUT, delay: 0.35 + index * 0.035 }}
+          transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.1 + index * 0.02 }}
         >
           {char}
         </motion.span>
@@ -255,7 +251,7 @@ function Stagger({ order, children }: { order: number; children: ReactNode }) {
       <motion.div
         initial={reduce ? false : { opacity: 0, y: 16 }}
         animate={ready ? { opacity: 1, y: 0 } : undefined}
-        transition={{ duration: 1, ease: EASE_OUT, delay: 0.9 + order * 0.15 }}
+        transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.4 + order * 0.08 }}
       >
         {children}
       </motion.div>
@@ -295,21 +291,19 @@ function Eyebrow({ color, children }: { color: MotionValue<string>; children: Re
 function CtaButton({
   progress,
   start,
-  flagship,
 }: {
   progress: MotionValue<number>;
   start: number;
-  flagship: ProductRef;
 }) {
   // Only clickable once the beat is visible.
   const pointerEvents = useTransform(progress, (v) => (v > start + FADE / 2 ? "auto" : "none"));
   return (
     <motion.a
-      href={flagshipHref(flagship)}
+      href="/catalog"
       style={{ pointerEvents }}
       className={buttonClasses({ size: "lg", className: "mt-4 w-fit" })}
     >
-      Order the kit
+      Shop the collection
       <ArrowRight aria-hidden className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
     </motion.a>
   );

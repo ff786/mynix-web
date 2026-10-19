@@ -10,7 +10,7 @@ export default function SiteError({ error, reset }: { error: Error & { digest?: 
   }, [error]);
 
   return (
-    <main data-theme="dark" data-section-bg="#050505" className="flex min-h-screen items-center px-6 pb-24 pt-36 sm:px-10">
+    <main data-theme="dark" data-section-bg="#050505" className="flex min-h-dvh items-center px-6 pb-24 pt-36 sm:px-10">
       <div className="mx-auto max-w-xl text-center">
         <p className="text-xs uppercase tracking-[0.35em] text-white/40">Something went wrong</p>
         <h1 className="mt-6 text-4xl font-semibold uppercase leading-[0.95] tracking-tighter text-white/90 sm:text-6xl">

@@ -13,7 +13,6 @@ import {
 } from "framer-motion";
 import ScrollyBeats from "@/components/hero/ScrollyBeats";
 import LoadingScreen from "@/components/ui/LoadingScreen";
-import type { ProductRef } from "@/types/product";
 
 /* -------------------------------------------------------------------------- */
 /*  Config                                                                     */
@@ -44,7 +43,7 @@ const HEADING_COLORS = ["#0f172a", "#0f172a", "rgba(255,255,255,0.9)", "rgba(255
 const BODY_COLORS = ["#475569", "#475569", "rgba(255,255,255,0.6)", "rgba(255,255,255,0.6)"];
 
 // Critically damped: follows the scroll closely and settles without a slow tail.
-const SPRING = { stiffness: 240, damping: 32, mass: 1, restDelta: 0.0005 };
+const SPRING = { stiffness: 420, damping: 42, mass: 1, restDelta: 0.0005 };
 
 const toCss = ([r, g, b]: RGB) => `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
 const mix = (a: RGB, b: RGB, t: number): RGB => [
@@ -111,15 +110,15 @@ function loadOrder(count: number): number[] {
   return order;
 }
 
-const FETCH_CONCURRENCY = 4;
+const FETCH_CONCURRENCY = 6;
 // Decoded frames kept around the playhead. 174 full-HD frames (~1.4 GB decoded)
 // overflow the browser's image cache, which then re-decodes JPEGs on the main
 // thread mid-scroll — the "stuck" hitches. Instead a small window is decoded off
 // the main thread (createImageBitmap) ahead of the scroll direction.
-const DECODE_AHEAD = 10;
-const DECODE_BEHIND = 4;
-const KEEP_RADIUS = 14;
-const MAX_IN_FLIGHT = 6;
+const DECODE_AHEAD = 16;
+const DECODE_BEHIND = 6;
+const KEEP_RADIUS = 22;
+const MAX_IN_FLIGHT = 8;
 
 /** Average colour of the four corners — the studio backdrop of the frame. */
 function sampleBackdrop(bitmap: ImageBitmap, ctx: CanvasRenderingContext2D): RGB {
@@ -334,7 +333,7 @@ function nearestBackdrop(backdrops: (RGB | null)[], index: number): RGB {
 /*  Viewer                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export default function MynixTorchViewer({ flagship }: { flagship: ProductRef }) {
+export default function MynixTorchViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -536,12 +535,12 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
         ref={containerRef}
         style={{ backgroundColor }}
         aria-label="MYNIX Gemology Torch showcase"
-        className="relative h-[400vh]"
+        className="relative h-[280svh]"
       >
         {/* Nav target for "Scrollytelling": one viewport in, where the deconstruction starts. */}
-        <div id="experience" aria-hidden className="absolute inset-x-0 top-[100vh]" />
+        <div id="experience" aria-hidden className="absolute inset-x-0 top-[100svh]" />
 
-        <div className="sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden">
+        <div className="sticky top-0 flex h-svh w-full items-center justify-center overflow-hidden">
           {/* Canvas stage — edges are feathered so frame boundaries dissolve into the page. */}
           <div ref={stageRef} className="absolute inset-0 flex items-center justify-center">
             <canvas
@@ -552,7 +551,7 @@ export default function MynixTorchViewer({ flagship }: { flagship: ProductRef })
             />
           </div>
 
-          <ScrollyBeats progress={smooth} headingColor={headingColor} bodyColor={bodyColor} ready={ready} flagship={flagship} />
+          <ScrollyBeats progress={smooth} headingColor={headingColor} bodyColor={bodyColor} ready={ready} />
         </div>
       </motion.section>
     </>

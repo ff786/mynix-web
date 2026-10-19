@@ -2,26 +2,20 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { BatteryFull, Cpu, Focus, Power, Ruler, ShieldCheck, ShoppingBag, Target, Zap, type LucideIcon } from "lucide-react";
+import { LayoutGrid, MessageCircle, Ruler, ShieldCheck, ShoppingBag, type LucideIcon } from "lucide-react";
 import SectionLink from "@/components/layout/SectionLink";
 import Button, { buttonClasses } from "@/components/ui/Button";
 import Eyebrow from "@/components/ui/text/Eyebrow";
 import Reveal from "@/components/ui/text/Reveal";
 import RevealText from "@/components/ui/text/RevealText";
-import type { ProductRef } from "@/types/product";
-import { flagshipHref } from "@/utils/links";
 
-type Spec = { icon: LucideIcon; label: string; value: string };
+type Strength = { icon: LucideIcon; label: string; value: string };
 
-const SPECS: Spec[] = [
-  { icon: Zap, label: "Emitter", value: "High-output UV LED module" },
-  { icon: Focus, label: "Optics", value: "Precision glass focusing lens" },
-  { icon: Target, label: "Nozzle", value: "5mm brushed stainless steel cone, interchangeable" },
-  { icon: ShieldCheck, label: "Chassis", value: "Anodized aluminum" },
-  { icon: Ruler, label: "Measure", value: "Laser-etched precision ruler markings" },
-  { icon: Cpu, label: "Driver", value: "Micro-PCB driver circuit board" },
-  { icon: BatteryFull, label: "Power", value: "Rechargeable Li-ion battery cell" },
-  { icon: Power, label: "Control", value: "Illuminated green power switch" },
+const STRENGTHS: Strength[] = [
+  { icon: Ruler, label: "Precision", value: "Instruments chosen to show a stone's true colour, clarity and character" },
+  { icon: LayoutGrid, label: "Full range", value: "Cutting, weighing, inspection, handling and presentation in one place" },
+  { icon: ShieldCheck, label: "Built to last", value: "Durable tools made for daily use at the bench and in the field" },
+  { icon: MessageCircle, label: "Direct support", value: "Talk to the MYNIX team on WhatsApp for pricing, availability and honest advice" },
 ];
 
 const reveal = {
@@ -31,7 +25,7 @@ const reveal = {
   transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
 };
 
-export default function FlagshipSpecs({ flagship }: { flagship: ProductRef }) {
+export default function WhyMynix() {
   return (
     <section
       id="specs"
@@ -43,24 +37,24 @@ export default function FlagshipSpecs({ flagship }: { flagship: ProductRef }) {
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <Eyebrow className="mb-5">The Flagship</Eyebrow>
+            <Eyebrow className="mb-5">Why MYNIX</Eyebrow>
             <RevealText
               id="specs-title"
-              text={"Every component,\nengineered."}
+              text={"Every instrument,\nchosen."}
               className="max-w-3xl text-4xl font-semibold uppercase leading-[0.92] tracking-tighter text-ink/90 sm:text-6xl lg:text-7xl"
             />
           </div>
           <Reveal as="p" delay={0.3} className="max-w-sm leading-relaxed text-ink/60">
-            The MYNIX Professional Gemology &amp; Jewelry Appraisal Torch built for precise, repeatable
-            inspection at the bench and in the field.
+            Gemology tools and equipment for the people who grade, trade and appraise stones, selected for
+            precise, repeatable results at the bench and in the field.
           </Reveal>
         </div>
 
-        {/* Transparent PNG — the torch sits directly on the section, no backdrop. */}
+        {/* Transparent PNG of the MYNIX torch, one of the instruments in the range, sitting directly on the section. */}
         <motion.div {...reveal} className="relative mt-16 aspect-[1672/941]">
           <Image
             src="/images/the-flagship.png"
-            alt="Exploded view of the MYNIX torch showing nozzle, optics, LED module, battery and circuit board"
+            alt="Exploded view of the MYNIX Gemology Torch, one of the instruments in the MYNIX range"
             fill
             sizes="(min-width: 1280px) 1280px, 100vw"
             className="object-contain"
@@ -68,7 +62,7 @@ export default function FlagshipSpecs({ flagship }: { flagship: ProductRef }) {
         </motion.div>
 
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {SPECS.map((spec, i) => (
+          {STRENGTHS.map((spec, i) => (
             <motion.div
               key={spec.label}
               {...reveal}
@@ -86,9 +80,9 @@ export default function FlagshipSpecs({ flagship }: { flagship: ProductRef }) {
         </dl>
 
         <motion.div {...reveal} className="mt-12 flex flex-col gap-3 sm:flex-row">
-          <Button href={flagshipHref(flagship)} size="lg">
+          <Button href="/catalog" size="lg">
             <ShoppingBag className="h-5 w-5" />
-            Buy now
+            Shop the collection
           </Button>
           <SectionLink section="contact" className={buttonClasses({ variant: "secondary", size: "lg" })}>
             Ask For Support..

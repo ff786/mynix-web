@@ -16,7 +16,7 @@ export default function NotFound() {
       <main
         data-theme="dark"
         data-section-bg="#050505"
-        className="flex min-h-screen items-center px-6 pb-24 pt-36 sm:px-10"
+        className="flex min-h-dvh items-center px-6 pb-24 pt-36 sm:px-10"
       >
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs uppercase tracking-[0.35em] text-white/40">Error 404</p>

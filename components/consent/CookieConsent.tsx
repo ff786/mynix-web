@@ -19,7 +19,7 @@ export default function CookieConsent() {
     <div
       role="region"
       aria-label="Cookie consent"
-      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-xl rounded-2xl border border-white/10 bg-[#111]/95 p-5 text-sm text-white/70 shadow-2xl backdrop-blur-md sm:inset-x-6 sm:bottom-6"
+      className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-2xl border border-white/10 bg-[#111]/95 p-5 text-sm text-white/70 shadow-2xl backdrop-blur-md sm:inset-x-6 sm:bottom-6"
     >
       <p className="leading-relaxed">
         We use essential cookies to keep you signed in and remember your cart. With your permission, we&apos;d also like
@@ -32,14 +32,14 @@ export default function CookieConsent() {
         <button
           type="button"
           onClick={() => setConsent("denied")}
-          className="rounded-full border border-white/20 px-5 py-2.5 font-medium text-white/80 transition-colors hover:text-white"
+          className="rounded-full border border-white/20 px-5 py-3 font-medium text-white/80 transition-colors hover:text-white"
         >
           Essential only
         </button>
         <button
           type="button"
           onClick={() => setConsent("granted")}
-          className="rounded-full bg-white px-5 py-2.5 font-medium text-[#1d1d1f] transition-opacity hover:opacity-90"
+          className="rounded-full bg-white px-5 py-3 font-medium text-[#1d1d1f] transition-opacity hover:opacity-90"
         >
           Accept
         </button>

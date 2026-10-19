@@ -4,7 +4,7 @@ import Button from "@/components/ui/Button";
 import Eyebrow from "@/components/ui/text/Eyebrow";
 import Reveal from "@/components/ui/text/Reveal";
 import RevealText from "@/components/ui/text/RevealText";
-import FlagshipSpecs from "@/components/showcase/FlagshipSpecs";
+import WhyMynix from "@/components/showcase/WhyMynix";
 import NewsletterSection from "@/components/newsletter/NewsletterSection";
 import ProductRanges from "@/components/showcase/ProductRanges";
 import { ArrowRight } from "lucide-react";
@@ -52,8 +52,6 @@ const jsonLd = (data: object) => JSON.stringify(data).replace(/</g, "\\u003c");
  */
 export default async function LandingPage({ section }: { section?: LandingSection }) {
   const { products, categories } = await getStorefront();
-  const flagship = products.find((p) => p.flagship);
-  const flagshipRef = { id: flagship?.id ?? "", name: flagship?.name ?? "MYNIX Gemology Torch" };
 
   return (
     <main>
@@ -66,9 +64,9 @@ export default async function LandingPage({ section }: { section?: LandingSectio
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(ORGANIZATION_LD) }}
       />
-      <MynixTorchViewer flagship={flagshipRef} />
+      <MynixTorchViewer />
 
-      <FlagshipSpecs flagship={flagshipRef} />
+      <WhyMynix />
 
       <section
         id="products"

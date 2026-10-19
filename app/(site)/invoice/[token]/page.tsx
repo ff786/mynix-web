@@ -18,7 +18,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoice/[token
     : null;
 
   return (
-    <main data-theme="dark" data-section-bg="#050505" className="min-h-screen px-6 pb-24 pt-36 sm:px-10 sm:pt-44">
+    <main data-theme="dark" data-section-bg="#050505" className="min-h-dvh px-6 pb-24 pt-36 sm:px-10 sm:pt-44">
       <div className="mx-auto max-w-2xl">
         <h1 className="text-4xl font-semibold uppercase tracking-tighter text-white/90 sm:text-6xl">Invoice</h1>
         {order ? (

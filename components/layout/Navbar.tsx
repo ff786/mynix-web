@@ -160,7 +160,7 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
             )}
           </ul>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-0.5 sm:gap-3">
             <Link
               href="/catalog"
               className={buttonClasses({ size: "sm", className: "hidden px-5 py-2.5 text-sm sm:inline-flex" })}
@@ -176,7 +176,7 @@ export default function Navbar({ categories, productCount }: NavbarProps) {
               aria-label="Open menu"
               aria-expanded={menuOpen}
               aria-controls="mobile-nav"
-              className="-mr-2 rounded-full p-2 transition-opacity hover:opacity-70 lg:hidden"
+              className="-mr-2.5 rounded-full p-2.5 transition-opacity hover:opacity-70 lg:hidden"
             >
               <Menu className="h-6 w-6" />
             </button>

@@ -4,7 +4,7 @@
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, minHeight: "100vh", display: "grid", placeItems: "center", background: "#050505", color: "#fff", fontFamily: "system-ui, sans-serif", textAlign: "center", padding: 24 }}>
+      <body style={{ margin: 0, minHeight: "100dvh", display: "grid", placeItems: "center", background: "#050505", color: "#fff", fontFamily: "system-ui, sans-serif", textAlign: "center", padding: 24 }}>
         <div>
           <p style={{ letterSpacing: "0.4em", fontWeight: 600 }}>MYNIX</p>
           <h1 style={{ fontSize: 32, margin: "24px 0 12px" }}>Something went wrong.</h1>

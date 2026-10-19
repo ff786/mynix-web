@@ -116,3 +116,51 @@ body {
     scroll-behavior: auto;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Touch devices (iPhone / iPad)                                     */
+/* ------------------------------------------------------------------ */
+
+html {
+  /* No auto-resized text after rotating, no grey flash on tap. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Taps register at once: no double-tap-to-zoom delay on controls. */
+a,
+button,
+summary,
+label,
+select,
+input,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* iOS zooms the page when a field under 16px is focused; keep every field at 16px. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Drop iOS's inner shadow and forced rounding on text fields. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
+/* Checkboxes and radios big enough for a thumb. */
+@media (pointer: coarse) {
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}

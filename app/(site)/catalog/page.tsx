@@ -35,7 +35,7 @@ export default async function CatalogPage({ searchParams }: PageProps<"/catalog"
   const initialProductId = typeof product === "string" ? product : undefined;
 
   return (
-    <main data-theme="dark" data-section-bg="#050505" className="min-h-screen px-6 pb-24 pt-36 sm:px-10 sm:pt-44">
+    <main data-theme="dark" data-section-bg="#050505" className="min-h-dvh px-6 pb-24 pt-36 sm:px-10 sm:pt-44">
       <div className="mx-auto max-w-7xl">
         <Eyebrow className="mb-5">Full Catalog</Eyebrow>
         <RevealText

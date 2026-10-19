@@ -50,7 +50,8 @@ export default function ProductCard({ listing, onQuickView, priority, headingAs:
         product={lead}
         priority={priority}
         sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-        className="aspect-[4/3]"
+        fit="contain"
+        className="aspect-square"
       />
       {soldOut && (
         <span className="absolute left-4 top-4 rounded-full bg-black/70 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/80 backdrop-blur">

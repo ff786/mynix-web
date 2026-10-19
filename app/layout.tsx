@@ -19,7 +19,7 @@ const newsreader = Newsreader({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "MYNIX — Professional Gemology Tools & Equipment in Sri Lanka",
+    default: "MYNIX - Professional Gemology Tools & Equipment in Sri Lanka",
     template: "%s · MYNIX Gemology",
   },
   description: SITE_DESCRIPTION,

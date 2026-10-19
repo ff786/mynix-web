@@ -34,7 +34,7 @@ export default function CategoryFilter({ categories, value, onChange, counts, la
             aria-pressed={active}
             onClick={() => onChange(option.id)}
             className={cn(
-              "relative shrink-0 rounded-full px-4 py-2.5 text-xs font-medium uppercase tracking-[0.16em] transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+              "relative min-h-11 shrink-0 rounded-full px-4 py-2.5 text-xs font-medium uppercase tracking-[0.16em] transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
               active ? "text-[#1d1d1f]" : "text-white/60 hover:text-white",
             )}
           >

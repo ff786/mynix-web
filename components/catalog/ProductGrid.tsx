@@ -106,7 +106,7 @@ export default function ProductGrid({
               type="button"
               onClick={() => setQuery("")}
               aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-white/50 hover:text-white"
+              className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full p-3.5 text-white/50 hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>

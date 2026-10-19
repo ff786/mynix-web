@@ -71,7 +71,7 @@ export default function MobileNav({ open, onClose, onHome, categories }: MobileN
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 34 }}
-            className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-[#050505] px-6 pb-10 pt-5 text-white outline-none"
+            className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-[#050505] px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5 text-white outline-none"
           >
             <div className="flex h-[52px] items-center justify-between">
               <BrandLogo />
@@ -79,13 +79,13 @@ export default function MobileNav({ open, onClose, onHome, categories }: MobileN
                 type="button"
                 onClick={onClose}
                 aria-label="Close menu"
-                className="-mr-2 rounded-full p-2 text-white/70 transition-colors hover:text-white"
+                className="-mr-2.5 rounded-full p-2.5 text-white/70 transition-colors hover:text-white"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
-            <nav aria-label="Mobile" className="-mx-6 mt-12 flex-1 overflow-y-auto px-6">
+            <nav aria-label="Mobile" className="-mx-6 mt-12 flex-1 overflow-y-auto overscroll-contain px-6">
               <ul className="space-y-1">
                 {links.map((link, i) => (
                   <motion.li

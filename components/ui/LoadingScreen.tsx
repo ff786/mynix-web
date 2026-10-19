@@ -8,7 +8,7 @@ export default function LoadingScreen({ progress }: { progress: number }) {
   return (
     <motion.div
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } }}
+      exit={{ opacity: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[linear-gradient(180deg,#ffffff_0%,#f1f5f9_55%,#050505_100%)]"
       role="status"
       aria-live="polite"

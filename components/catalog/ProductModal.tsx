@@ -71,13 +71,13 @@ function ModalPanel({ product, options, onSelect, onClose }: ModalPanelProps) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 24, scale: 0.98 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0a0a0b] text-white outline-none sm:rounded-3xl md:grid md:grid-cols-2"
+        className="relative flex max-h-[92dvh] overscroll-contain w-full max-w-4xl flex-col overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0a0a0b] text-white outline-none sm:rounded-3xl md:grid md:grid-cols-2"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-white/80 backdrop-blur transition-colors hover:text-white"
+          className="absolute right-3 top-3 z-10 rounded-full bg-black/60 p-3 text-white/80 backdrop-blur transition-colors hover:text-white"
         >
           <X className="h-5 w-5" />
         </button>
@@ -87,7 +87,7 @@ function ModalPanel({ product, options, onSelect, onClose }: ModalPanelProps) {
             key={product.id}
             product={product}
             sizes="(min-width: 768px) 424px, 100vw"
-            className="aspect-[4/3] md:aspect-square md:rounded-2xl"
+            className="aspect-square md:rounded-2xl"
           />
         </div>
 
@@ -125,7 +125,7 @@ function ModalPanel({ product, options, onSelect, onClose }: ModalPanelProps) {
             <PurchasePanel key={product.id} product={product} />
             <Link
               href={`/products/${product.id}`}
-              className="mt-1 inline-flex w-full items-center justify-center gap-1.5 py-2 text-sm text-white/55 underline-offset-4 transition-colors hover:text-white hover:underline"
+              className="mt-1 inline-flex w-full items-center justify-center gap-1.5 py-3 text-sm text-white/55 underline-offset-4 transition-colors hover:text-white hover:underline"
             >
               View full product details
               <ArrowRight className="h-3.5 w-3.5" />
