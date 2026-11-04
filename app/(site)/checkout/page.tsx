@@ -4,7 +4,7 @@ import CheckoutForm from "@/components/checkout/CheckoutForm";
 import { getStorefront } from "@/lib/catalog";
 import { getCustomerProfile, getSavedAddresses } from "@/lib/customer/profile";
 import { deliveryFee } from "@/lib/orders/config";
-import { isOnePayConfigured } from "@/lib/payments/onepay";
+import { canStartOnePayPayments } from "@/lib/payments/onepay";
 import { vaultEnabled } from "@/lib/payments/vault";
 import { SITE_URL_IS_SECURE } from "@/lib/site";
 
@@ -30,7 +30,7 @@ export default async function CheckoutPage() {
             deliveryFee={deliveryFee()}
             customer={customer}
             addresses={customer ? addresses : []}
-            cardEnabled={isOnePayConfigured && vaultEnabled && SITE_URL_IS_SECURE}
+            cardEnabled={canStartOnePayPayments && vaultEnabled && SITE_URL_IS_SECURE}
           /> : <StoreUnavailable />}
       </div>
     </main>

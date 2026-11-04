@@ -10,10 +10,15 @@ const APP_ID = process.env.ONEPAY_APP_ID ?? "";
 const HASH_SALT = process.env.ONEPAY_HASH_SALT ?? "";
 // Sent in the Authorization header of every request (OnePay merchant dashboard → the app's API Keys).
 const APP_TOKEN = process.env.ONEPAY_APP_TOKEN?.trim() ?? "";
-// Live by default; set ONEPAY_API_URL to the sandbox address from the merchant dashboard to test.
+// Sandbox and live share this address and differ by credentials; override only for a local stand-in.
 const API_URL = (process.env.ONEPAY_API_URL?.trim() || "https://api.onepay.lk").replace(/\/+$/, "");
 
 export const isOnePayConfigured = Boolean(APP_ID && HASH_SALT && APP_TOKEN);
+/** Without the Callback Token every webhook is refused, so no new payment may start. */
+export const canStartOnePayPayments = isOnePayConfigured && Boolean(process.env.ONEPAY_CALLBACK_TOKEN?.trim());
+
+/** OnePay refuses smaller LKR amounts. */
+export const MIN_ONLINE_AMOUNT_LKR = 100;
 
 if (!/^https:\/\//.test(API_URL) && !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(API_URL)) {
   throw new Error("ONEPAY_API_URL must use https.");

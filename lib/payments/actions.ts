@@ -3,7 +3,7 @@
 import { deliveryFee } from "@/lib/orders/config";
 import { orderFieldsSchema, priceCart, resolveIdentity } from "@/lib/orders/place";
 import { holdStock, parkPending, releaseStock, rememberPending, sealPending, type PendingCardOrder } from "@/lib/payments/card";
-import { createCheckoutLink, isOnePayConfigured, OnePayError } from "@/lib/payments/onepay";
+import { canStartOnePayPayments, createCheckoutLink, MIN_ONLINE_AMOUNT_LKR, OnePayError } from "@/lib/payments/onepay";
 import { vaultEnabled } from "@/lib/payments/vault";
 import { limited, visitorKey } from "@/lib/rate-limit";
 import { SITE_URL, SITE_URL_IS_SECURE } from "@/lib/site";
@@ -23,7 +23,7 @@ export type StartCardResult = { ok: true; redirectUrl: string } | { ok: false; e
  * the order is created once OnePay confirms the payment.
  */
 export async function startCardPayment(input: unknown): Promise<StartCardResult> {
-  if (!isOnePayConfigured || !vaultEnabled || !SITE_URL_IS_SECURE) {
+  if (!canStartOnePayPayments || !vaultEnabled || !SITE_URL_IS_SECURE) {
     return { ok: false, error: "Card payment isn't available right now. Please choose cash on delivery." };
   }
 
@@ -49,6 +49,9 @@ export async function startCardPayment(input: unknown): Promise<StartCardResult>
   const fee = deliveryFee();
   const amount = Math.round((cart.subtotal + fee) * 100) / 100;
   if (!(amount > 0)) return { ok: false, error: "Your cart total is invalid. Please review your cart." };
+  if (amount < MIN_ONLINE_AMOUNT_LKR) {
+    return { ok: false, error: `Online payment is available for orders of LKR ${MIN_ONLINE_AMOUNT_LKR} or more. Please choose cash on delivery.` };
+  }
 
   const pending: PendingCardOrder = {
     requestId,

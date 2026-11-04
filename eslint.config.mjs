@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Second dev server used for payment test runs (NEXT_DIST_DIR):
+    ".next-paytest/**",
   ]),
 ]);
 

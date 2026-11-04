@@ -1,5 +1,18 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
 /** Maximum OnePay callback size. The documented payload contains only a few fields. */
 export const MAX_ONEPAY_CALLBACK_BYTES = 8 * 1024;
+
+const digest = (value: string) => createHash("sha256").update(value).digest();
+
+/**
+ * OnePay sends the app's Callback Token, unchanged, as the Authorization header
+ * (seen on real test payments; its docs don't cover this). No token set rejects everything.
+ */
+export function isAuthenticCallback(authorization: string | null, token: string): boolean {
+  if (!token || authorization === null) return false;
+  return timingSafeEqual(digest(authorization), digest(token));
+}
 
 export type OnePayCallback = {
   transaction_id: string;

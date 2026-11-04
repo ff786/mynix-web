@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { runPaymentFinalization } from "../lib/payments/finalize-core.ts";
-import { MAX_ONEPAY_CALLBACK_BYTES, readOnePayCallback } from "../lib/payments/webhook.ts";
+import { isAuthenticCallback, MAX_ONEPAY_CALLBACK_BYTES, readOnePayCallback } from "../lib/payments/webhook.ts";
 
 const callbackRequest = (body, headers = {}) =>
   new Request("https://mynix.test/api/onepay/callback", {
@@ -9,6 +9,20 @@ const callbackRequest = (body, headers = {}) =>
     headers: { "content-type": "application/json", ...headers },
     body,
   });
+
+test("a callback is authentic only with the exact Callback Token", () => {
+  assert.equal(isAuthenticCallback("callback-token", "callback-token"), true);
+  assert.equal(isAuthenticCallback("wrong-token", "callback-token"), false);
+  assert.equal(isAuthenticCallback("Bearer callback-token", "callback-token"), false);
+  assert.equal(isAuthenticCallback("", "callback-token"), false);
+  assert.equal(isAuthenticCallback(null, "callback-token"), false);
+});
+
+test("with no Callback Token configured every callback is refused", () => {
+  assert.equal(isAuthenticCallback("", ""), false);
+  assert.equal(isAuthenticCallback("anything", ""), false);
+  assert.equal(isAuthenticCallback(null, ""), false);
+});
 
 test("accepts the documented OnePay callback object", async () => {
   const result = await readOnePayCallback(
