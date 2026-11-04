@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useCart } from "@/components/cart/CartProvider";
 import { useCartLines } from "@/components/cart/CartView";
@@ -9,6 +9,7 @@ import OrderSummaryCard from "@/components/orders/OrderSummaryCard";
 import { DISTRICTS } from "@/lib/districts";
 import { placeOrder, type OrderSummary } from "@/lib/orders/actions";
 import { saveAddress } from "@/lib/customer/actions";
+import { startCardPayment } from "@/lib/payments/actions";
 import type { CustomerProfile, SavedAddress } from "@/lib/customer/profile";
 import type { Product } from "@/types/product";
 import { cn } from "@/utils/cn";
@@ -37,9 +38,11 @@ type CheckoutFormProps = {
   customer: CustomerProfile | null;
   /** Signed-in customer's saved addresses (default first). */
   addresses: SavedAddress[];
+  /** Card payment (OnePay) is configured on the server. */
+  cardEnabled: boolean;
 };
 
-export default function CheckoutForm({ products, deliveryFee, customer, addresses }: CheckoutFormProps) {
+export default function CheckoutForm({ products, deliveryFee, customer, addresses, cardEnabled }: CheckoutFormProps) {
   const { ready, clear } = useCart();
   const { valid, subtotal, hasProblems } = useCartLines(products);
   const [pending, startTransition] = useTransition();
@@ -47,12 +50,21 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
   const [placed, setPlaced] = useState<OrderSummary | null>(null);
   // One id per checkout: a retry after a network error can't create a second order.
   const requestId = useRef<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"CASH_ON_DELIVERY" | "ONLINE">("CASH_ON_DELIVERY");
+  // True while the browser is leaving for OnePay; reset if the customer comes back with Back.
+  const [redirecting, setRedirecting] = useState(false);
   const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
   const phone = customer?.phone ?? verifiedPhone;
   // Saved address in use ("new" = typing one); starts on the default.
   const [addressChoice, setAddressChoice] = useState(addresses[0] ? String(addresses[0].id) : "new");
   const chosen = addresses.find((a) => String(a.id) === addressChoice);
   const prefill = chosen ?? (addresses.length === 0 ? customer?.lastDeliveryAddress : null);
+
+  useEffect(() => {
+    const onShow = (event: PageTransitionEvent) => event.persisted && setRedirecting(false);
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
 
   if (placed) {
     return (
@@ -107,23 +119,46 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
     const value = (key: string) => String(form.get(key) ?? "");
     requestId.current ??= crypto.randomUUID();
 
+    const details = {
+      requestId: requestId.current,
+      items: valid.map(({ line }) => ({ id: line.id, quantity: line.quantity })),
+      customerName: value("customerName"),
+      customerPhone: phone ?? "",
+      customerEmail: value("customerEmail"),
+      addressLine1: value("addressLine1"),
+      addressLine2: value("addressLine2"),
+      city: value("city"),
+      district: value("district"),
+      postalCode: value("postalCode"),
+      deliveryNotes: value("deliveryNotes"),
+      website: value("website"),
+    };
+
     setError(null);
     startTransition(async () => {
-      const result = await placeOrder({
-        requestId: requestId.current!,
-        items: valid.map(({ line }) => ({ id: line.id, quantity: line.quantity })),
-        paymentMethod: "CASH_ON_DELIVERY",
-        customerName: value("customerName"),
-        customerPhone: phone ?? "",
-        customerEmail: value("customerEmail"),
-        addressLine1: value("addressLine1"),
-        addressLine2: value("addressLine2"),
-        city: value("city"),
-        district: value("district"),
-        postalCode: value("postalCode"),
-        deliveryNotes: value("deliveryNotes"),
-        website: value("website"),
-      });
+      if (paymentMethod === "ONLINE") {
+        // The server prices the cart and returns OnePay's payment page; the order is placed once it's paid.
+        const started = await startCardPayment(details);
+        if (started.ok) {
+          if (customer && form.get("saveAddress") === "on") {
+            await saveAddress({
+              label: addresses.length === 0 ? "Home" : `Address ${addresses.length + 1}`,
+              addressLine1: details.addressLine1,
+              addressLine2: details.addressLine2,
+              city: details.city,
+              district: details.district as Parameters<typeof saveAddress>[0]["district"],
+              postalCode: details.postalCode,
+            }).catch(() => undefined);
+          }
+          setRedirecting(true);
+          window.location.assign(started.redirectUrl);
+          return;
+        }
+        setError(started.error);
+        return;
+      }
+
+      const result = await placeOrder({ ...details, paymentMethod: "CASH_ON_DELIVERY" });
       if (result.ok) {
         if (customer && form.get("saveAddress") === "on") {
           // Best effort; the order is already placed.
@@ -300,20 +335,30 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
         <fieldset>
           <legend className="mb-5 text-xs uppercase tracking-[0.25em] text-white/45">Payment</legend>
           <div className="space-y-3">
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/40 bg-white/[0.04] p-4">
-              <input type="radio" name="paymentMethod" value="CASH_ON_DELIVERY" defaultChecked className="accent-white" />
-              <span>
-                <span className="block text-sm font-medium text-white/90">Cash on delivery</span>
-                <span className="block text-xs text-white/50">Pay the courier when your order arrives.</span>
-              </span>
-            </label>
-            <label className="flex items-center gap-3 rounded-xl border border-white/10 p-4 opacity-50">
-              <input type="radio" name="paymentMethod" value="CARD" disabled />
-              <span>
-                <span className="block text-sm font-medium text-white/90">Card payment (OnePay)</span>
-                <span className="block text-xs text-white/50">Coming soon.</span>
-              </span>
-            </label>
+            <PaymentOption
+              value="CASH_ON_DELIVERY"
+              checked={paymentMethod === "CASH_ON_DELIVERY"}
+              onSelect={setPaymentMethod}
+              title="Cash on delivery"
+              hint="Pay the courier when your order arrives."
+            />
+            {cardEnabled ? (
+              <PaymentOption
+                value="ONLINE"
+                checked={paymentMethod === "ONLINE"}
+                onSelect={setPaymentMethod}
+                title="Pay online"
+                hint="Visa, Mastercard, FriMi, HelaPay or QPlus on OnePay's secure page. We never see your payment details."
+              />
+            ) : (
+              <label className="flex items-center gap-3 rounded-xl border border-white/10 p-4 opacity-50">
+                <input type="radio" name="paymentMethod" value="ONLINE" disabled />
+                <span>
+                  <span className="block text-sm font-medium text-white/90">Pay online</span>
+                  <span className="block text-xs text-white/50">Coming soon.</span>
+                </span>
+              </label>
+            )}
           </div>
         </fieldset>
 
@@ -355,13 +400,51 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
         )}
         <button
           type="submit"
-          disabled={pending || !phone}
+          disabled={pending || redirecting || !phone}
           className="mt-6 w-full rounded-full bg-white py-3.5 text-sm font-medium text-[#1d1d1f] transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {pending ? "Placing order…" : "Place order"}
+          {pending || redirecting ? (paymentMethod === "ONLINE" ? "Redirecting to payment…" : "Placing order…") : paymentMethod === "ONLINE" ? "Pay online" : "Place order"}
         </button>
-        <p className="mt-3 text-center text-xs text-white/40">Prices and stock are confirmed when you place the order.</p>
+        <p className="mt-3 text-center text-xs text-white/40">
+          {paymentMethod === "ONLINE" ? "You'll pay on OnePay's secure page, then come straight back here." : "Prices and stock are confirmed when you place the order."}
+        </p>
       </aside>
     </form>
+  );
+}
+
+function PaymentOption({
+  value,
+  checked,
+  onSelect,
+  title,
+  hint,
+}: {
+  value: "CASH_ON_DELIVERY" | "ONLINE";
+  checked: boolean;
+  onSelect: (value: "CASH_ON_DELIVERY" | "ONLINE") => void;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors",
+        checked ? "border-white/40 bg-white/[0.04]" : "border-white/10 hover:border-white/25",
+      )}
+    >
+      <input
+        type="radio"
+        name="paymentMethod"
+        value={value}
+        checked={checked}
+        onChange={() => onSelect(value)}
+        className="accent-white"
+      />
+      <span>
+        <span className="block text-sm font-medium text-white/90">{title}</span>
+        <span className="block text-xs text-white/50">{hint}</span>
+      </span>
+    </label>
   );
 }

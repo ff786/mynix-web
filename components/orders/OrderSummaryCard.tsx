@@ -42,8 +42,8 @@ export default function OrderSummaryCard({ order }: { order: OrderSummary }) {
             </div>
             <div className="flex justify-between pt-2 text-base font-semibold text-white/90">
               <dt>
-                {order.paymentMethod === "CARD"
-                  ? "Paid by card"
+                {order.paymentMethod === "ONLINE"
+                  ? "Paid online"
                   : order.paymentMethod === "BANK_TRANSFER"
                     ? "Paid by bank transfer"
                     : "Pay on delivery"}
