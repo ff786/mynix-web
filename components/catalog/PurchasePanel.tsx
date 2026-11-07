@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import AddToCartButton from "@/components/cart/AddToCartButton";
+import BuyNowButton, { canBuyNow } from "@/components/cart/BuyNowButton";
 import WhatsAppIcon from "@/components/ui/WhatsAppIcon";
 import type { Product } from "@/types/product";
 import { getWhatsAppInquiryUrl } from "@/utils/whatsapp";
 
-/** Quantity picker, add to cart and a WhatsApp question link (quick view and product page). */
+/** Quantity picker, buy now, add to cart and a WhatsApp question link (quick view and product page). */
 export default function PurchasePanel({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
 
@@ -38,7 +39,13 @@ export default function PurchasePanel({ product }: { product: Product }) {
           </button>
         </div>
       )}
-      <AddToCartButton product={product} quantity={quantity} size="lg" />
+      <BuyNowButton product={product} quantity={quantity} size="lg" />
+      <AddToCartButton
+        product={product}
+        quantity={quantity}
+        size="lg"
+        variant={canBuyNow(product, quantity) ? "secondary" : "primary"}
+      />
       <a
         href={getWhatsAppInquiryUrl(product.name)}
         target="_blank"

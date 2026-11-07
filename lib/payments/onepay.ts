@@ -17,9 +17,6 @@ export const isOnePayConfigured = Boolean(APP_ID && HASH_SALT && APP_TOKEN);
 /** Without the Callback Token every webhook is refused, so no new payment may start. */
 export const canStartOnePayPayments = isOnePayConfigured && Boolean(process.env.ONEPAY_CALLBACK_TOKEN?.trim());
 
-/** OnePay refuses smaller LKR amounts. */
-export const MIN_ONLINE_AMOUNT_LKR = 100;
-
 if (!/^https:\/\//.test(API_URL) && !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(API_URL)) {
   throw new Error("ONEPAY_API_URL must use https.");
 }

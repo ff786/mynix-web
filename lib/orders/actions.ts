@@ -7,6 +7,7 @@ import { orderFieldsSchema, priceCart, resolveIdentity, submitToPos } from "@/li
 import { mobileSchema } from "@/lib/phone";
 import { PosError, posRequest } from "@/lib/pos/client";
 import { limited, visitorKey } from "@/lib/rate-limit";
+import { formatLkr, meetsMinimumOrder, MIN_ORDER_LKR } from "@/utils/money";
 
 /**
  * Checkout and order tracking. The browser only sends website product ids and
@@ -55,6 +56,9 @@ export async function placeOrder(input: CheckoutInput): Promise<ActionResult> {
 
   const cart = await priceCart(items);
   if (!cart.ok) return cart;
+  if (!meetsMinimumOrder(cart.subtotal + deliveryFee())) {
+    return { ok: false, error: `The minimum order is ${formatLkr(MIN_ORDER_LKR)}.` };
+  }
 
   const result = await submitToPos({
     requestId,

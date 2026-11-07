@@ -13,7 +13,8 @@ import { startCardPayment } from "@/lib/payments/actions";
 import type { CustomerProfile, SavedAddress } from "@/lib/customer/profile";
 import type { Product } from "@/types/product";
 import { cn } from "@/utils/cn";
-import { formatLkr } from "@/utils/money";
+import { buyNowHref, rememberBuyNow, type BuyNowLine } from "@/utils/buy-now";
+import { formatLkr, meetsMinimumOrder, MIN_ORDER_LKR } from "@/utils/money";
 
 
 const inputClass =
@@ -40,11 +41,13 @@ type CheckoutFormProps = {
   addresses: SavedAddress[];
   /** Card payment (OnePay) is configured on the server. */
   cardEnabled: boolean;
+  /** One product bought straight from the catalog; the saved cart stays as it is. */
+  buyNow: BuyNowLine | null;
 };
 
-export default function CheckoutForm({ products, deliveryFee, customer, addresses, cardEnabled }: CheckoutFormProps) {
+export default function CheckoutForm({ products, deliveryFee, customer, addresses, cardEnabled, buyNow }: CheckoutFormProps) {
   const { ready, clear } = useCart();
-  const { valid, subtotal, hasProblems } = useCartLines(products);
+  const { valid, subtotal, hasProblems } = useCartLines(products, buyNow ? [buyNow] : undefined);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [placed, setPlaced] = useState<OrderSummary | null>(null);
@@ -100,6 +103,17 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
 
   if (!ready) return <div className="h-40" aria-hidden />;
 
+  if (buyNow && (valid.length === 0 || hasProblems)) {
+    return (
+      <div className="rounded-3xl border border-dashed border-white/10 px-6 py-16 text-center">
+        <p className="text-lg font-semibold text-white/80">This item is no longer available.</p>
+        <Link href="/catalog" className="mt-4 inline-block text-white/70 underline underline-offset-4">
+          Browse the catalog
+        </Link>
+      </div>
+    );
+  }
+
   if (valid.length === 0 || hasProblems) {
     return (
       <div className="rounded-3xl border border-dashed border-white/10 px-6 py-16 text-center">
@@ -108,6 +122,17 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
         </p>
         <Link href={valid.length === 0 ? "/catalog" : "/cart"} className="mt-4 inline-block text-white/70 underline underline-offset-4">
           {valid.length === 0 ? "Browse the catalog" : "Review your cart"}
+        </Link>
+      </div>
+    );
+  }
+
+  if (!meetsMinimumOrder(subtotal + deliveryFee)) {
+    return (
+      <div className="rounded-3xl border border-dashed border-white/10 px-6 py-16 text-center">
+        <p className="text-lg font-semibold text-white/80">The minimum order is {formatLkr(MIN_ORDER_LKR)}.</p>
+        <Link href={buyNow ? "/catalog" : "/cart"} className="mt-4 inline-block text-white/70 underline underline-offset-4">
+          {buyNow ? "Browse the catalog" : "Review your cart"}
         </Link>
       </div>
     );
@@ -150,6 +175,7 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
               postalCode: details.postalCode,
             }).catch(() => undefined);
           }
+          rememberBuyNow(buyNow);
           setRedirecting(true);
           window.location.assign(started.redirectUrl);
           return;
@@ -171,7 +197,7 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
             postalCode: value("postalCode"),
           }).catch(() => undefined);
         }
-        clear();
+        if (!buyNow) clear();
         setPlaced(result.order);
         window.scrollTo({ top: 0 });
       } else {
@@ -213,7 +239,10 @@ export default function CheckoutForm({ products, deliveryFee, customer, addresse
                   />
                   <p className="text-xs text-white/40">
                     We verify your number by SMS, call to confirm delivery and SMS your invoice.{" "}
-                    <Link href="/account?next=/checkout" className="underline underline-offset-4 hover:text-white">
+                    <Link
+                      href={`/account?next=${encodeURIComponent(buyNow ? buyNowHref(buyNow) : "/checkout")}`}
+                      className="underline underline-offset-4 hover:text-white"
+                    >
                       Have an account? Sign in
                     </Link>
                   </p>

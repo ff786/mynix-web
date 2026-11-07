@@ -19,7 +19,8 @@ export const metadata: Metadata = {
 };
 
 /** Only paths on this site, so the sign-in can't bounce visitors elsewhere. */
-const safeNext = (value: unknown) => (typeof value === "string" && /^\/[a-z0-9/-]*$/.test(value) ? value : "/account");
+const safeNext = (value: unknown) =>
+  typeof value === "string" && /^\/[a-z0-9/-]*(\?buy=[a-z0-9-]+&qty=[0-9]+)?$/.test(value) ? value : "/account";
 
 const TABS = [
   { id: "profile", label: "Profile" },

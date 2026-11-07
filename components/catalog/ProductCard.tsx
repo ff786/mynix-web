@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Info, SlidersHorizontal } from "lucide-react";
 import AddToCartButton from "@/components/cart/AddToCartButton";
+import BuyNowButton, { canBuyNow } from "@/components/cart/BuyNowButton";
 import ProductMedia from "@/components/catalog/ProductMedia";
 import { buttonClasses } from "@/components/ui/Button";
 import type { Product } from "@/types/product";
@@ -123,8 +124,9 @@ export default function ProductCard({ listing, onQuickView, priority, headingAs:
         </p>
 
         <div className="mt-auto grid grid-cols-2 gap-2.5 pt-6">
+          {!variable && <BuyNowButton product={lead} className="col-span-2 min-h-12 px-3" />}
           {!variable ? (
-            <AddToCartButton product={lead} className="min-h-12 px-3" />
+            <AddToCartButton product={lead} variant={canBuyNow(lead) ? "secondary" : "primary"} className="min-h-12 px-3" />
           ) : onQuickView ? (
             <button type="button" onClick={() => onQuickView(lead)} className={primaryClass}>
               {choose}

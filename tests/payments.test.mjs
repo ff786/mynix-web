@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { buyNowHref, parseBuyNow } from "../utils/buy-now.ts";
+import { meetsMinimumOrder } from "../utils/money.ts";
 import { runPaymentFinalization } from "../lib/payments/finalize-core.ts";
 import { isAuthenticCallback, MAX_ONEPAY_CALLBACK_BYTES, readOnePayCallback } from "../lib/payments/webhook.ts";
 
@@ -9,6 +11,27 @@ const callbackRequest = (body, headers = {}) =>
     headers: { "content-type": "application/json", ...headers },
     body,
   });
+
+test("the minimum order is LKR 100 exactly, without rounding errors", () => {
+  assert.equal(meetsMinimumOrder(100), true);
+  assert.equal(meetsMinimumOrder(99.99), false);
+  assert.equal(meetsMinimumOrder(12), false);
+  assert.equal(meetsMinimumOrder(99.999999), true);
+});
+
+test("a Buy now address reads back as one product and quantity", () => {
+  assert.deepEqual(parseBuyNow("3x3cm-box-black", "2"), { id: "3x3cm-box-black", quantity: 2 });
+  assert.equal(buyNowHref({ id: "3x3cm-box-black", quantity: 2 }), "/checkout?buy=3x3cm-box-black&qty=2");
+});
+
+test("an odd Buy now address falls back safely", () => {
+  assert.equal(parseBuyNow(undefined, "1"), null);
+  assert.equal(parseBuyNow(["a", "b"], "1"), null);
+  assert.equal(parseBuyNow("../evil", "1"), null);
+  for (const qty of [undefined, "0", "-1", "1.5", "abc", "99999", ["1", "2"]]) {
+    assert.deepEqual(parseBuyNow("item", qty), { id: "item", quantity: 1 });
+  }
+});
 
 test("a callback is authentic only with the exact Callback Token", () => {
   assert.equal(isAuthenticCallback("callback-token", "callback-token"), true);

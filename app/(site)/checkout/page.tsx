@@ -7,6 +7,7 @@ import { deliveryFee } from "@/lib/orders/config";
 import { canStartOnePayPayments } from "@/lib/payments/onepay";
 import { vaultEnabled } from "@/lib/payments/vault";
 import { SITE_URL_IS_SECURE } from "@/lib/site";
+import { parseBuyNow } from "@/utils/buy-now";
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -14,12 +15,16 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function CheckoutPage() {
-  const [{ products, available }, customer, addresses] = await Promise.all([
+export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ buy?: unknown; qty?: unknown }> }) {
+  const [{ products, available }, customer, addresses, { buy, qty }] = await Promise.all([
     getStorefront(),
     getCustomerProfile(),
     getSavedAddresses(),
+    searchParams,
   ]);
+  const requested = parseBuyNow(buy, qty);
+  const maxQuantity = products.find((p) => p.id === requested?.id)?.maxQuantity;
+  const buyNow = requested && { ...requested, quantity: Math.min(requested.quantity, maxQuantity ?? requested.quantity) };
 
   return (
     <main data-theme="dark" data-section-bg="#050505" className="min-h-dvh px-6 pb-24 pt-36 sm:px-10 sm:pt-44">
@@ -31,6 +36,7 @@ export default async function CheckoutPage() {
             customer={customer}
             addresses={customer ? addresses : []}
             cardEnabled={canStartOnePayPayments && vaultEnabled && SITE_URL_IS_SECURE}
+            buyNow={buyNow}
           /> : <StoreUnavailable />}
       </div>
     </main>

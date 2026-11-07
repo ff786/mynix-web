@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BackToCheckoutLink from "@/components/checkout/BackToCheckoutLink";
 import ClearCartOnMount from "@/components/checkout/ClearCartOnMount";
 import OrderSummaryCard from "@/components/orders/OrderSummaryCard";
 import type { OrderSummary } from "@/lib/orders/actions";
@@ -14,14 +15,14 @@ export const metadata: Metadata = {
 
 const link = "text-white/70 underline-offset-4 hover:text-white hover:underline";
 
-type Notice = { eyebrow: string; title: string; body: string; action?: { href: string; label: string } };
+type Notice = { eyebrow: string; title: string; body: string; backToCheckout?: boolean };
 
 const NOTICES: Record<string, Notice> = {
   failed: {
     eyebrow: "Payment not completed",
     title: "We haven't received your payment.",
     body: "The payment was cancelled or declined, or it may still be processing. No order is placed until it completes; if it does, we'll confirm it by SMS. Your cart is still saved. You can try again, or choose cash on delivery.",
-    action: { href: "/checkout", label: "Back to checkout" },
+    backToCheckout: true,
   },
   retry: {
     eyebrow: "One moment",
@@ -32,7 +33,7 @@ const NOTICES: Record<string, Notice> = {
     eyebrow: "Payment status",
     title: "We couldn't find your checkout in this browser.",
     body: "If you paid, your order will be confirmed automatically and you'll get an SMS. If you were not charged, you can go back to checkout and try again.",
-    action: { href: "/checkout", label: "Back to checkout" },
+    backToCheckout: true,
   },
 };
 
@@ -107,11 +108,7 @@ export default async function PaymentResultPage({ searchParams }: { searchParams
       <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white/90">{notice.title}</h2>
       <p className="mt-3 text-white/60">{notice.body}</p>
       <div className="mt-8 flex gap-6 text-sm">
-        {notice.action && (
-          <Link href={notice.action.href} className={link}>
-            {notice.action.label}
-          </Link>
-        )}
+        {notice.backToCheckout && <BackToCheckoutLink className={link}>Back to checkout</BackToCheckoutLink>}
         <a href={getWhatsAppGeneralUrl()} target="_blank" rel="noopener noreferrer" className={link}>
           Contact us on WhatsApp
         </a>

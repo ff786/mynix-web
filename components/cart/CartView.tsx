@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { ArrowRight, Minus, Plus, Trash2 } from "lucide-react";
-import { useCart } from "@/components/cart/CartProvider";
+import { useCart, type CartLine } from "@/components/cart/CartProvider";
 import ProductMedia from "@/components/catalog/ProductMedia";
 import Button from "@/components/ui/Button";
 import type { Product } from "@/types/product";
-import { formatLkr } from "@/utils/money";
+import { formatLkr, meetsMinimumOrder, MIN_ORDER_LKR } from "@/utils/money";
 
 type CartViewProps = { products: Product[]; deliveryFee: number };
 
-/** Cart lines joined with the live catalogue (prices and availability). */
-export function useCartLines(products: Product[]) {
-  const { lines } = useCart();
+/** Cart lines (or the given "Buy now" lines) joined with the live catalogue (prices and availability). */
+export function useCartLines(products: Product[], only?: CartLine[]) {
+  const cart = useCart();
+  const lines = only ?? cart.lines;
   const byId = new Map(products.map((p) => [p.id, p]));
   const joined = lines.map((line) => ({ line, product: byId.get(line.id) }));
   const valid = joined.filter(
@@ -28,6 +29,9 @@ export default function CartView({ products, deliveryFee }: CartViewProps) {
   const { joined, valid, subtotal, hasProblems } = useCartLines(products);
 
   if (!ready) return <div className="h-40" aria-hidden />;
+
+  const total = subtotal + (valid.length ? deliveryFee : 0);
+  const belowMinimum = valid.length > 0 && !meetsMinimumOrder(total);
 
   if (joined.length === 0) {
     return (
@@ -113,13 +117,18 @@ export default function CartView({ products, deliveryFee }: CartViewProps) {
           </div>
           <div className="flex justify-between border-t border-white/10 pt-3 text-base font-semibold text-white/90">
             <dt>Total</dt>
-            <dd className="tabular-nums">{formatLkr(subtotal + (valid.length ? deliveryFee : 0))}</dd>
+            <dd className="tabular-nums">{formatLkr(total)}</dd>
           </div>
         </dl>
         {hasProblems && (
           <p className="mt-4 text-sm text-amber-300/90">Please fix the items marked above to continue.</p>
         )}
-        {hasProblems || valid.length === 0 ? (
+        {belowMinimum && (
+          <p className="mt-4 text-sm text-amber-300/90">
+            The minimum order is {formatLkr(MIN_ORDER_LKR)}. Add {formatLkr(MIN_ORDER_LKR - total)} more to check out.
+          </p>
+        )}
+        {hasProblems || valid.length === 0 || belowMinimum ? (
           <button type="button" disabled className="mt-6 w-full rounded-full bg-white/20 py-3.5 text-sm font-medium text-white/50">
             Checkout
           </button>

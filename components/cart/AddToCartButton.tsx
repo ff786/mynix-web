@@ -11,10 +11,11 @@ type AddToCartButtonProps = {
   product: Product;
   quantity?: number;
   size?: "sm" | "md" | "lg";
+  variant?: "primary" | "secondary";
   className?: string;
 };
 
-export default function AddToCartButton({ product, quantity = 1, size = "sm", className }: AddToCartButtonProps) {
+export default function AddToCartButton({ product, quantity = 1, size = "sm", variant, className }: AddToCartButtonProps) {
   const { lines, add } = useCart();
   const [added, setAdded] = useState(false);
   const inCart = lines.find((l) => l.id === product.id)?.quantity ?? 0;
@@ -43,7 +44,7 @@ export default function AddToCartButton({ product, quantity = 1, size = "sm", cl
         setAdded(true);
       }}
       aria-live="polite"
-      className={buttonClasses({ size, className: cn("gap-2", full && "opacity-60", className) })}
+      className={buttonClasses({ variant, size, className: cn("gap-2", full && "opacity-60", className) })}
     >
       {added ? <Check className="h-4 w-4 shrink-0" /> : <ShoppingBag className="h-4 w-4 shrink-0" />}
       <span className="whitespace-nowrap">{added ? "Added" : full ? "Max in cart" : "Add to cart"}</span>
