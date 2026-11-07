@@ -26,7 +26,7 @@ export function getWhatsAppGeneralUrl(
 export const DEVELOPER_WHATSAPP_NUMBER = "94704494812";
 
 export function getDeveloperWhatsAppUrl(
-  message = "Hello FS Technologies, I came across your work on the MYNIX website and would like to discuss a project.",
+  message = "Hello UrbanLabs Technologies, I came across your work on the MYNIX website and would like to discuss a project.",
 ): string {
   return `https://wa.me/${DEVELOPER_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
