@@ -51,7 +51,7 @@ export default function WhyMynix() {
         </div>
 
         {/* Transparent PNG of the MYNIX torch, one of the instruments in the range, sitting directly on the section. */}
-        <motion.div {...reveal} className="relative mt-16 aspect-[1672/941]">
+        {/*<motion.div {...reveal} className="relative mt-16 aspect-[1672/941]">
           <Image
             src="/images/the-flagship.png"
             alt="Exploded view of the MYNIX Gemology Torch, one of the instruments in the MYNIX range"
@@ -59,7 +59,7 @@ export default function WhyMynix() {
             sizes="(min-width: 1280px) 1280px, 100vw"
             className="object-contain"
           />
-        </motion.div>
+        </motion.div>*/}
 
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {STRENGTHS.map((spec, i) => (
