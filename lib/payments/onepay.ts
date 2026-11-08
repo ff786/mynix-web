@@ -10,8 +10,12 @@ const APP_ID = process.env.ONEPAY_APP_ID ?? "";
 const HASH_SALT = process.env.ONEPAY_HASH_SALT ?? "";
 // Sent in the Authorization header of every request (OnePay merchant dashboard → the app's API Keys).
 const APP_TOKEN = process.env.ONEPAY_APP_TOKEN?.trim() ?? "";
-// Sandbox and live share this address and differ by credentials; override only for a local stand-in.
-const API_URL = (process.env.ONEPAY_API_URL?.trim() || "https://api.onepay.lk").replace(/\/+$/, "");
+const ONEPAY_URL = "https://api.onepay.lk";
+// Live OnePay only accepts requests from the address listed for the app (the EC2 server,
+// 65.1.163.136), so production points this at the relay there: https://store-api.mynix.lk/onepay.
+const API_URL = (process.env.ONEPAY_API_URL?.trim() || ONEPAY_URL).replace(/\/+$/, "");
+// The relay admits only the website, by the same key as the POS store API. Never sent to OnePay itself.
+const RELAY_KEY = API_URL === ONEPAY_URL ? "" : (process.env.POS_STORE_KEY ?? "");
 
 export const isOnePayConfigured = Boolean(APP_ID && HASH_SALT && APP_TOKEN);
 /** Without the Callback Token every webhook is refused, so no new payment may start. */
@@ -35,7 +39,12 @@ async function call(path: string, body: Record<string, unknown>): Promise<Record
   try {
     res = await fetch(`${API_URL}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: APP_TOKEN },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: APP_TOKEN,
+        ...(RELAY_KEY ? { "X-Mynix-Store-Key": RELAY_KEY } : {}),
+      },
       body: JSON.stringify(body),
       cache: "no-store",
       signal: AbortSignal.timeout(15_000),
